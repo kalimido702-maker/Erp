@@ -1,0 +1,9 @@
+{
+    "HR": true,
+    "Inventory": true,
+    "Finance": true,
+    "Accounting": true,
+    "Sales": true,
+    "Purchases": true,
+    "Settings": true
+}

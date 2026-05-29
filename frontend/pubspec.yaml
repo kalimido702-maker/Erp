@@ -1,0 +1,94 @@
+name: erp_app
+description: ERP System - Cross Platform Application
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # Network
+  dio: ^5.4.3+1
+  retrofit: ^4.1.0
+  pretty_dio_logger: ^1.3.1
+  connectivity_plus: ^6.0.3
+
+  # Storage
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # UI Components
+  syncfusion_flutter_datagrid: ^26.1.35
+  syncfusion_flutter_charts: ^26.1.35
+  flutter_screenutil: ^5.9.0
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+  flutter_svg: ^2.0.10+1
+  lottie: ^3.1.0
+
+  # Forms & Validation
+  reactive_forms: ^17.0.1
+
+  # Printing & PDF
+  printing: ^5.12.0
+  pdf: ^3.10.8
+
+  # Localization
+  easy_localization: ^3.0.7
+
+  # Date & Time
+  intl: ^0.19.0
+  shamsi_jalaali: ^0.11.0
+
+  # Utils
+  equatable: ^2.0.5
+  dartz: ^0.10.1
+  get_it: ^7.7.0
+  injectable: ^2.4.1
+  logger: ^2.3.0
+  uuid: ^4.4.0
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.9
+  riverpod_generator: ^2.4.0
+  retrofit_generator: ^8.1.0
+  injectable_generator: ^2.6.1
+  hive_generator: ^2.0.1
+  json_serializable: ^6.8.0
+  json_annotation: ^4.9.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/fonts/
+    - assets/translations/
+
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Regular.ttf
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Cairo-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Cairo-Light.ttf
+          weight: 300
