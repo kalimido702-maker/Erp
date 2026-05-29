@@ -1,9 +1,18 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:injectable/injectable.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import '../constants/app_constants.dart';
+
+final apiClientProvider = Provider<ApiClient>((ref) {
+  return ApiClient(
+    const FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    ),
+  );
+});
 
 @singleton
 class ApiClient {

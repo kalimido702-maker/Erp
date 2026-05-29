@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/sync_status_banner.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class DashboardPage extends ConsumerWidget {
@@ -12,36 +13,29 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).valueOrNull;
 
-    return Scaffold(
+    return OfflineAwareScaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: true,
-            title: Text('لوحة التحكم', style: TextStyle(fontFamily: 'Cairo', fontSize: 20.sp)),
-            actions: [
-              IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.w),
-                child: CircleAvatar(
-                  backgroundColor: AppColors.primary,
-                  child: Text(user?.name.substring(0, 1) ?? 'A', style: const TextStyle(color: Colors.white)),
-                ),
-              ),
-            ],
-          ),
-          SliverPadding(
-            padding: EdgeInsets.all(24.w),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _WelcomeBanner(userName: user?.name ?? ''),
-                SizedBox(height: 24.h),
-                const _StatsRow(),
-                SizedBox(height: 24.h),
-                const _ModulesGrid(),
-              ]),
+      appBar: AppBar(
+        title: Text('لوحة التحكم', style: TextStyle(fontFamily: 'Cairo', fontSize: 20.sp)),
+        actions: [
+          IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            child: CircleAvatar(
+              backgroundColor: AppColors.primary,
+              child: Text(user?.name.substring(0, 1) ?? 'A', style: const TextStyle(color: Colors.white)),
             ),
           ),
+        ],
+      ),
+      body: ListView(
+        padding: EdgeInsets.all(24.w),
+        children: [
+          _WelcomeBanner(userName: user?.name ?? ''),
+          SizedBox(height: 24.h),
+          const _StatsRow(),
+          SizedBox(height: 24.h),
+          const _ModulesGrid(),
         ],
       ),
     );

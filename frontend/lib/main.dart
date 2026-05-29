@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/di/injection.dart';
+import 'core/offline/local_database.dart';
+import 'core/offline/sync_manager.dart';
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -11,6 +13,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
   await configureDependencies();
+
+  // Open local SQLite database
+  await LocalDatabase.instance.db;
 
   runApp(
     EasyLocalization(
@@ -29,6 +34,9 @@ class ErpApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+
+    // Boot the connectivity watcher and sync manager eagerly
+    ref.watch(syncManagerProvider);
 
     return ScreenUtilInit(
       designSize: const Size(1440, 900),
