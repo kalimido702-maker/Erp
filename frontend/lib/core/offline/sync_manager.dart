@@ -140,17 +140,26 @@ class SyncManager {
           throw Exception('Unknown method: ${op.method}');
       }
 
-      // Success — get server-assigned ID if this was a create
+      // Write back server state to normalized_entities
       if (op.operation == SyncOperationType.create) {
-        final serverId = response.data?['data']?['id']?.toString();
-        if (serverId != null) {
-          await _db.markEntitySynced(op.entityId, serverId);
+        final serverData = response.data?['data'] as Map<String, dynamic>?;
+        final serverId = serverData?['id']?.toString();
+        if (serverId != null && serverData != null) {
+          // Replace the temp local record with the real server record
+          await _db.markNormalizedSynced(op.entityId, serverId, op.entity);
+          // Also update normalized store with full server data
+          await _db.saveNormalized(entity: op.entity, serverId: serverId, localId: op.entityId, data: serverData);
         }
       } else if (op.operation == SyncOperationType.delete) {
-        await _db.deleteLocalEntity(op.entity, op.entityId);
+        await _db.deleteNormalized(op.entity, op.entityId);
       } else {
-        // Update: mark as synced
-        await _db.markEntitySynced(op.entityId, op.entityId);
+        // Update: merge server response into normalized store
+        final serverData = response.data?['data'] as Map<String, dynamic>?;
+        if (serverData != null) {
+          await _db.saveNormalized(entity: op.entity, serverId: op.entityId, data: serverData);
+        } else {
+          await _db.markNormalizedSynced(op.entityId, op.entityId, op.entity);
+        }
       }
 
       // Remove from queue
