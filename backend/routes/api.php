@@ -26,6 +26,11 @@ Route::prefix('v1')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
             Route::get('me', [AuthController::class, 'me']);
             Route::post('refresh', [AuthController::class, 'refresh']);
+
+            // Two-factor enrolment / management
+            Route::post('2fa/enable', [\App\Http\Controllers\Api\TwoFactorController::class, 'enable']);
+            Route::post('2fa/confirm', [\App\Http\Controllers\Api\TwoFactorController::class, 'confirm']);
+            Route::post('2fa/disable', [\App\Http\Controllers\Api\TwoFactorController::class, 'disable']);
         });
 
         // Modules routes are registered automatically by nwidart/laravel-modules
