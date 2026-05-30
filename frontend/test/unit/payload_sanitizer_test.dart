@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/core/offline/payload_sanitizer.dart';
+import 'package:erp_app/core/offline/payload_sanitizer.dart';
 
 void main() {
   group('sanitizePayload', () {

@@ -35,7 +35,7 @@ class TenantIsolationTest extends TestCase
         $this->actingAs($userA)
              ->getJson('/api/v1/inventory/products')
              ->assertOk()
-             ->assertJsonPath('data.data.0.name', 'Product A')
+             ->assertJsonPath('data.0.name', 'Product A')
              ->assertJsonMissing(['name' => 'Product B']);
     }
 

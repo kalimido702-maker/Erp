@@ -17,6 +17,7 @@ class UserResource extends JsonResource
             'avatar'     => $this->avatar ? asset('storage/'.$this->avatar) : null,
             'is_active'  => $this->is_active,
             'branch_id'  => $this->branch_id,
+            'company_id' => $this->company_id,
             'roles'      => $this->getRoleNames(),
             'permissions'=> $this->getAllPermissions()->pluck('name'),
             'created_at' => $this->created_at?->toISOString(),

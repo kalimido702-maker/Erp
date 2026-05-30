@@ -100,6 +100,10 @@ jobs:
         working-directory: frontend
         run: flutter pub get
 
+      - name: Generate code (json_serializable / riverpod)
+        working-directory: frontend
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Analyze
         working-directory: frontend
         run: flutter analyze --no-fatal-infos

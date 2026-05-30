@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/core/offline/url_parser.dart';
+import 'package:erp_app/core/offline/url_parser.dart';
 
 void main() {
   group('UrlParser.parse', () {

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:logger/logger.dart';
 
@@ -45,16 +44,29 @@ class RealtimeService {
   Timer? _reconnectTimer;
   bool _disposed = false;
   int _reconnectDelay = 2;
+  int? _companyId;
+  String? _token;
+
+  // Reverb runs as a standalone WebSocket server (default port 8080), separate
+  // from the HTTP API — so its connection details come from dedicated envs that
+  // mirror the backend's REVERB_* settings, not from API_BASE_URL.
+  static const _appKey = String.fromEnvironment('REVERB_APP_KEY', defaultValue: 'local');
+  static const _wsHost = String.fromEnvironment('REVERB_HOST', defaultValue: 'localhost');
+  static const _wsPort = int.fromEnvironment('REVERB_PORT', defaultValue: 8080);
+  static const _wsScheme = String.fromEnvironment('REVERB_SCHEME', defaultValue: 'http');
 
   RealtimeService(this._ref);
 
   Future<void> connect(int companyId, String token) async {
     if (_disposed) return;
     _disconnect();
+    _companyId = companyId;
+    _token = token;
 
-    final env = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
-    final wsBase = env.replaceFirst(RegExp(r'^http'), 'ws');
-    final uri = Uri.parse('$wsBase/app/local?protocol=7&client=flutter&version=8.0.0');
+    final wsScheme = _wsScheme == 'https' ? 'wss' : 'ws';
+    final uri = Uri.parse(
+      '$wsScheme://$_wsHost:$_wsPort/app/$_appKey?protocol=7&client=flutter&version=8.0.0',
+    );
 
     try {
       _channel = WebSocketChannel.connect(uri);
@@ -62,27 +74,45 @@ class RealtimeService {
       _channel!.stream.listen(
         _onMessage,
         onError: _onError,
-        onDone: () => _onDone(companyId, token),
+        onDone: _onDone,
       );
 
-      _subscribeTo(companyId, token);
       _startHeartbeat();
-      _reconnectDelay = 2;
-      _log.i('[WS] Connected to Reverb');
+      _log.i('[WS] Connecting to Reverb…');
+      // Subscription happens after pusher:connection_established (see _onMessage).
     } catch (e) {
       _log.e('[WS] Connection failed: $e');
-      _scheduleReconnect(companyId, token);
+      _scheduleReconnect();
     }
   }
 
-  void _subscribeTo(int companyId, String token) {
-    _send({
-      'event': 'pusher:subscribe',
-      'data': {
-        'channel': 'private-company.$companyId',
-        'auth': token,
-      },
-    });
+  /// Pusher private-channel auth: ask the backend to sign socket_id:channel.
+  /// Sending the bearer token directly as `auth` would be rejected by Reverb.
+  Future<void> _authorizeAndSubscribe(String socketId) async {
+    final companyId = _companyId;
+    if (companyId == null) return;
+    final channel = 'private-company.$companyId';
+
+    try {
+      final dio = _ref.read(apiClientProvider).dio;
+      final res = await dio.post(
+        '/broadcasting/auth',
+        data: {'socket_id': socketId, 'channel_name': channel},
+      );
+      final auth = (res.data as Map)['auth'] as String?;
+      if (auth == null) {
+        _log.w('[WS] No auth signature returned for $channel');
+        return;
+      }
+      _send({
+        'event': 'pusher:subscribe',
+        'data': {'channel': channel, 'auth': auth},
+      });
+      _reconnectDelay = 2; // successful subscription resets backoff
+      _log.i('[WS] Subscribed to $channel');
+    } catch (e) {
+      _log.e('[WS] Channel authorization failed: $e');
+    }
   }
 
   void _onMessage(dynamic raw) {
@@ -90,30 +120,58 @@ class RealtimeService {
       final msg = jsonDecode(raw as String) as Map<String, dynamic>;
       final event = msg['event'] as String? ?? '';
 
-      if (event == 'erp.notification') {
-        final data = msg['data'];
-        final payload = data is String ? jsonDecode(data) as Map<String, dynamic> : data as Map<String, dynamic>;
-        final notification = ErpNotification.fromJson(payload);
-        _ref.read(notificationsProvider.notifier).add(notification);
-        _log.i('[WS] Notification: ${notification.title}');
+      switch (event) {
+        case 'pusher:connection_established':
+          final data = _decodeData(msg['data']);
+          final socketId = data['socket_id'] as String?;
+          if (socketId != null) _authorizeAndSubscribe(socketId);
+          return;
+        case 'pusher:ping':
+          _send({'event': 'pusher:pong', 'data': {}});
+          return;
+        case 'pusher:error':
+          _log.w('[WS] Pusher error: ${msg['data']}');
+          return;
+        case 'erp.notification':
+          final payload = _decodeData(msg['data']);
+          final notification = ErpNotification.fromJson(payload);
+          _ref.read(notificationsProvider.notifier).add(notification);
+          _log.i('[WS] Notification: ${notification.title}');
+          return;
+        default:
+          return;
       }
     } catch (e) {
       _log.w('[WS] Bad message: $e');
     }
   }
 
+  /// Pusher wraps the `data` field as a JSON-encoded string.
+  Map<String, dynamic> _decodeData(dynamic data) {
+    if (data is String) {
+      if (data.isEmpty) return {};
+      return jsonDecode(data) as Map<String, dynamic>;
+    }
+    if (data is Map<String, dynamic>) return data;
+    return {};
+  }
+
   void _onError(Object error) {
     _log.e('[WS] Error: $error');
   }
 
-  void _onDone(int companyId, String token) {
+  void _onDone() {
     if (!_disposed) {
       _log.w('[WS] Disconnected, scheduling reconnect');
-      _scheduleReconnect(companyId, token);
+      _scheduleReconnect();
     }
   }
 
-  void _scheduleReconnect(int companyId, String token) {
+  void _scheduleReconnect() {
+    final companyId = _companyId;
+    final token = _token;
+    if (companyId == null || token == null) return;
+
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(Duration(seconds: _reconnectDelay), () {
       if (!_disposed) {
@@ -138,6 +196,15 @@ class RealtimeService {
     _reconnectTimer?.cancel();
     _channel?.sink.close();
     _channel = null;
+  }
+
+  /// Tear down the connection on logout while keeping the service reusable
+  /// for the next login (unlike [dispose], does not permanently disable it).
+  void disconnect() {
+    _companyId = null;
+    _token = null;
+    _reconnectDelay = 2;
+    _disconnect();
   }
 
   void dispose() {

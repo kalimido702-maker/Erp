@@ -37,7 +37,7 @@ class AuthTest extends TestCase
         $this->postJson('/api/v1/auth/login', [
             'email'    => $user->email,
             'password' => 'wrong-password',
-        ])->assertUnprocessable();
+        ])->assertStatus(401);
     }
 
     public function test_inactive_user_cannot_login(): void
@@ -47,7 +47,7 @@ class AuthTest extends TestCase
         $this->postJson('/api/v1/auth/login', [
             'email'    => $user->email,
             'password' => 'secret123',
-        ])->assertUnprocessable();
+        ])->assertStatus(403);
     }
 
     public function test_me_endpoint_returns_authenticated_user(): void
@@ -68,6 +68,12 @@ class AuthTest extends TestCase
         $this->withToken($token)
              ->postJson('/api/v1/auth/logout')
              ->assertOk();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+
+        // Simulate a fresh token-based API client (no carried-over session cookie)
+        $this->app['auth']->forgetGuards();
+        $this->flushSession();
 
         $this->withToken($token)
              ->getJson('/api/v1/auth/me')

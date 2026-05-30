@@ -8,6 +8,7 @@ class UserEntity extends Equatable {
   final String? avatar;
   final bool isActive;
   final int? branchId;
+  final int? companyId;
   final List<String> roles;
   final List<String> permissions;
 
@@ -19,6 +20,7 @@ class UserEntity extends Equatable {
     this.avatar,
     required this.isActive,
     this.branchId,
+    this.companyId,
     required this.roles,
     required this.permissions,
   });

@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Models\Company;
 use App\Scopes\TenantScope;
+use App\Support\TenantContext;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 trait BelongsToTenant
@@ -13,8 +14,8 @@ trait BelongsToTenant
         static::addGlobalScope(new TenantScope);
 
         static::creating(function (self $model): void {
-            if (empty($model->company_id) && app()->bound('tenant.company_id')) {
-                $model->company_id = app('tenant.company_id');
+            if (empty($model->company_id)) {
+                $model->company_id = TenantContext::companyId();
             }
         });
     }

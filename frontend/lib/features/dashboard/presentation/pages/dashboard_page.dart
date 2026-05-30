@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/notification_bell.dart';
 import '../../../../shared/widgets/sync_status_banner.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
@@ -18,7 +19,7 @@ class DashboardPage extends ConsumerWidget {
       appBar: AppBar(
         title: Text('لوحة التحكم', style: TextStyle(fontFamily: 'Cairo', fontSize: 20.sp)),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+          const NotificationBell(),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.w),
             child: CircleAvatar(

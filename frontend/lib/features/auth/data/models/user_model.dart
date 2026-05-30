@@ -15,6 +15,8 @@ class UserModel {
   final bool isActive;
   @JsonKey(name: 'branch_id')
   final int? branchId;
+  @JsonKey(name: 'company_id')
+  final int? companyId;
   final List<String> roles;
   final List<String> permissions;
 
@@ -26,6 +28,7 @@ class UserModel {
     this.avatar,
     required this.isActive,
     this.branchId,
+    this.companyId,
     required this.roles,
     required this.permissions,
   });
@@ -41,6 +44,7 @@ class UserModel {
         avatar: avatar,
         isActive: isActive,
         branchId: branchId,
+        companyId: companyId,
         roles: roles,
         permissions: permissions,
       );

@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/realtime/realtime_service.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../domain/entities/user_entity.dart';
 
@@ -19,7 +20,9 @@ class AuthState extends _$AuthState {
     try {
       final ds = ref.read(authDatasourceProvider);
       final model = await ds.getMe();
-      return model.toEntity();
+      final entity = model.toEntity();
+      await _startRealtime(entity, token);
+      return entity;
     } catch (_) {
       await storage.delete(key: AppConstants.tokenKey);
       return null;
@@ -34,7 +37,9 @@ class AuthState extends _$AuthState {
     state = await AsyncValue.guard(() async {
       final result = await ds.login(email, password);
       await storage.write(key: AppConstants.tokenKey, value: result.token);
-      return result.user.toEntity();
+      final entity = result.user.toEntity();
+      await _startRealtime(entity, result.token);
+      return entity;
     });
   }
 
@@ -42,12 +47,22 @@ class AuthState extends _$AuthState {
     final storage = ref.read(secureStorageProvider);
     final ds = ref.read(authDatasourceProvider);
 
+    ref.read(realtimeServiceProvider).disconnect();
+
     try {
       await ds.logout();
     } catch (_) {}
 
     await storage.delete(key: AppConstants.tokenKey);
     state = const AsyncData(null);
+  }
+
+  /// Open the realtime channel for the user's company so push notifications
+  /// (low stock, order approvals, …) arrive while the app is open.
+  Future<void> _startRealtime(UserEntity user, String token) async {
+    final companyId = user.companyId;
+    if (companyId == null) return;
+    await ref.read(realtimeServiceProvider).connect(companyId, token);
   }
 }
 
