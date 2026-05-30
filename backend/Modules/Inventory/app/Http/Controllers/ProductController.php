@@ -124,7 +124,8 @@ class ProductController extends Controller
 
         return [
             'name'      => "$req|string|max:255",
-            'sku'       => [$req, 'string', 'max:100', $skuUnique],
+            // SKU is optional, but when present it must be unique within the tenant.
+            'sku'       => ['nullable', 'string', 'max:100', $skuUnique],
             'barcode'   => 'nullable|string|max:100',
             'category'  => 'nullable|string|max:100',
             'unit'      => 'nullable|string|max:50',

@@ -24,7 +24,7 @@ class ProductCrudTest extends TestCase
     {
         $this->actingUser();
 
-        $response = $this->postJson('/api/v1/products', [
+        $response = $this->postJson('/api/v1/inventory/products', [
             'name'  => 'لاب توب',
             'sku'   => 'LAP-1',
             'price' => 4500,
@@ -45,7 +45,7 @@ class ProductCrudTest extends TestCase
         $this->actingUser();
         $product = Product::create(['name' => 'Old', 'sku' => 'UPD-1', 'price' => 100]);
 
-        $response = $this->putJson("/api/v1/products/{$product->id}", [
+        $response = $this->putJson("/api/v1/inventory/products/{$product->id}", [
             'name'  => 'New Name',
             'sku'   => 'UPD-1',
             'price' => 150,
@@ -65,7 +65,7 @@ class ProductCrudTest extends TestCase
         $this->actingUser();
         $product = Product::create(['name' => 'Del', 'sku' => 'DEL-1', 'price' => 10]);
 
-        $response = $this->deleteJson("/api/v1/products/{$product->id}");
+        $response = $this->deleteJson("/api/v1/inventory/products/{$product->id}");
 
         $response->assertOk();
         $this->assertSoftDeleted('products', ['id' => $product->id]);
@@ -76,7 +76,7 @@ class ProductCrudTest extends TestCase
         $this->actingUser();
         Product::create(['name' => 'A', 'sku' => 'DUP-1', 'price' => 10]);
 
-        $response = $this->postJson('/api/v1/products', [
+        $response = $this->postJson('/api/v1/inventory/products', [
             'name'  => 'B',
             'sku'   => 'DUP-1',
             'price' => 20,
@@ -91,7 +91,7 @@ class ProductCrudTest extends TestCase
         $this->actingUser();
 
         // Missing required price → validation fails → nothing should be written.
-        $response = $this->postJson('/api/v1/products', [
+        $response = $this->postJson('/api/v1/inventory/products', [
             'name' => 'NoPrice',
             'sku'  => 'NP-1',
         ]);
