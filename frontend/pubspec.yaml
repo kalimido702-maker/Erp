@@ -62,6 +62,9 @@ dependencies:
   uuid: ^4.4.0
   permission_handler: ^11.3.1
 
+  # WebSocket / Real-time
+  web_socket_channel: ^3.0.1
+
   # Offline / Local DB
   sqflite: ^2.3.3+1
   path: ^1.9.0
