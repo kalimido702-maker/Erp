@@ -14,21 +14,35 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'sanctum']);
-        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'sanctum']);
-        Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'sanctum']);
+        $admin      = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'sanctum']);
+        $employee   = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'sanctum']);
 
         $permissions = [
             'users.view', 'users.create', 'users.edit', 'users.delete',
             'roles.view', 'roles.create', 'roles.edit', 'roles.delete',
             'branches.view', 'branches.create', 'branches.edit', 'branches.delete',
             'settings.view', 'settings.edit',
+            // Inventory
+            'products.view', 'products.create', 'products.edit', 'products.delete',
         ];
 
         foreach ($permissions as $perm) {
             Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'sanctum']);
         }
 
+        // super-admin: everything (also bypasses via policy before() hook).
         $superAdmin->syncPermissions(Permission::all());
+
+        // admin: full module access, no role/user administration.
+        $admin->syncPermissions(Permission::whereNotIn('name', [
+            'users.delete', 'roles.create', 'roles.edit', 'roles.delete',
+        ])->get());
+
+        // employee: read + day-to-day create/edit, but NOT delete.
+        $employee->syncPermissions([
+            'products.view', 'products.create', 'products.edit',
+            'branches.view', 'settings.view',
+        ]);
 
         $company = Company::firstOrCreate(
             ['slug' => 'default'],

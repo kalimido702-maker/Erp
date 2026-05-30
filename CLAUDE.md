@@ -199,10 +199,26 @@ class Customer extends Model
 }
 ```
 
-**4. Policy** (if access needs restricting) — `app/Policies/CustomerPolicy.php` extending `BasePolicy`.
+**4. Policy** — `Modules/Sales/app/Policies/CustomerPolicy.php` extending `BasePolicy`:
+```php
+class CustomerPolicy extends BasePolicy
+{
+    public function viewAny(User $user): bool { return $this->hasPermission($user, 'customers.view'); }
+    public function view(User $user, Customer $c): bool { return $this->hasPermission($user, 'customers.view') && $this->sameCompany($user, $c); }
+    public function create(User $user): bool { return $this->hasPermission($user, 'customers.create'); }
+    public function update(User $user, Customer $c): bool { return $this->hasPermission($user, 'customers.edit') && $this->sameCompany($user, $c); }
+    public function delete(User $user, Customer $c): bool { return $this->hasPermission($user, 'customers.delete') && $this->sameCompany($user, $c); }
+}
+```
+- **Register it** in the module's ServiceProvider `boot()` (module namespaces aren't auto-discovered):
+  ```php
+  Gate::policy(Customer::class, CustomerPolicy::class);
+  ```
+- **Seed the permissions** (`customers.{view,create,edit,delete}`) in `DatabaseSeeder` and assign them to roles. Permissions/roles use the **`sanctum` guard** (see §8).
 
 **5. Controller** — `Modules/Sales/app/Http/Controllers/CustomerController.php`:
 - `use ApiResponse, HandlesTransactions;`
+- **Authorize every action** — call `$this->authorize('viewAny', Customer::class)` (or `'view'/'create'/'update'/'delete'` with the model) as the **first line** of each method. (Do NOT use `authorizeResource()` in the constructor — Laravel 13 controllers have no `middleware()` method, so it throws.)
 - Add `@group Sales` + Scribe docblocks (`@bodyParam`, `@response`).
 - Validate via a private `rules()` method or a FormRequest.
 - Wrap writes in `$this->transaction(...)`.
@@ -270,9 +286,16 @@ features/customers/
 - **2FA (TOTP):** if a user has confirmed 2FA, login returns `422` with
   `errors.two_factor_required = [true]`; resend with `code` (TOTP or a single-use
   recovery code). Manage via `/v1/auth/2fa/{enable,confirm,disable}`.
-- **Roles/permissions:** Spatie, guard `sanctum`. Seeded roles: `super-admin`,
-  `admin`, `employee`. Check with `$user->hasRole(...)` / `hasPermissionTo(...)`
-  or `role:`/`permission:` middleware.
+- **Roles/permissions:** Spatie, guard **`sanctum`**. The `sanctum` guard is
+  defined in `config/auth.php` and the `User` model pins `$guard_name = 'sanctum'`
+  — roles/permissions/policies all resolve under it. When seeding or assigning in
+  tests, use the `sanctum` guard (`Permission::findOrCreate($name, 'sanctum')`),
+  otherwise checks silently fall back to the wrong guard.
+- Seeded roles: `super-admin` (all), `admin` (all modules, no user/role admin),
+  `employee` (view + create/edit, **no delete**). Check with `$user->hasRole(...)`
+  / `hasPermissionTo(...)` or enforce via Policies (preferred — see §6 step 4–5).
+- **Authorization is mandatory, not optional.** Every module endpoint authorizes
+  through its Policy. super-admin bypasses via `BasePolicy::before()`.
 - **Rate limits:** `login` = 5/min per email+IP; `api` = 90/min per user. Don't loosen.
 
 ---

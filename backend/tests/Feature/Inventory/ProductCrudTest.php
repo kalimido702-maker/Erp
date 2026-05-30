@@ -6,16 +6,24 @@ use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Inventory\Models\Product;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class ProductCrudTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** A user that holds every product permission (CRUD behaviour under test, not authz). */
     private function actingUser(): User
     {
         $company = Company::factory()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
+
+        foreach (['products.view', 'products.create', 'products.edit', 'products.delete'] as $perm) {
+            Permission::findOrCreate($perm, 'sanctum');
+            $user->givePermissionTo($perm);
+        }
+
         $this->actingAs($user);
         return $user;
     }

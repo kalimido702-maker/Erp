@@ -42,6 +42,13 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Token guard used by the API (Sanctum). Roles/permissions are issued
+        // under this guard, so it must be defined for Spatie to resolve them.
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
     ],
 
     /*

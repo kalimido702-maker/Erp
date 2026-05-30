@@ -27,8 +27,12 @@ abstract class BasePolicy
 
     protected function sameCompany(User $user, Model $model): bool
     {
-        return property_exists($model, 'company_id')
-            && (int) $model->company_id === (int) $user->company_id;
+        // Use getAttribute (not property_exists) — Eloquent attributes are not
+        // declared object properties, so property_exists() always returns false.
+        $companyId = $model->getAttribute('company_id');
+
+        return $companyId !== null
+            && (int) $companyId === (int) $user->company_id;
     }
 
     protected function hasPermission(User $user, string $permission): bool

@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Inventory\Models\Product;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class TenantIsolationTest extends TestCase
@@ -14,7 +15,12 @@ class TenantIsolationTest extends TestCase
 
     private function makeUser(Company $company): User
     {
-        return User::factory()->create(['company_id' => $company->id]);
+        $user = User::factory()->create(['company_id' => $company->id]);
+        foreach (['products.view', 'products.create', 'products.edit', 'products.delete'] as $perm) {
+            Permission::findOrCreate($perm, 'sanctum');
+            $user->givePermissionTo($perm);
+        }
+        return $user;
     }
 
     public function test_users_only_see_their_own_company_products(): void

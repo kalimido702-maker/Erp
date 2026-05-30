@@ -15,6 +15,9 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasApiTokens, HasRoles;
 
+    // Roles/permissions are issued under the API token guard.
+    protected string $guard_name = 'sanctum';
+
     protected $fillable = [
         'name',
         'email',

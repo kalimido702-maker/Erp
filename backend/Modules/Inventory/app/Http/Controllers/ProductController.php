@@ -29,6 +29,8 @@ class ProductController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Product::class);
+
         $query = Product::query()
             ->when($request->filled('search'), fn ($q) =>
                 $q->where(function ($sub) use ($request) {
@@ -60,6 +62,8 @@ class ProductController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Product::class);
+
         $validated = $request->validate($this->rules());
 
         $product = $this->transaction(fn () => Product::create($validated));
@@ -74,6 +78,8 @@ class ProductController extends Controller
      */
     public function show(Product $product): JsonResponse
     {
+        $this->authorize('view', $product);
+
         return $this->success($product);
     }
 
@@ -84,6 +90,8 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product): JsonResponse
     {
+        $this->authorize('update', $product);
+
         $validated = $request->validate($this->rules($product->id, partial: true));
 
         $product = $this->transaction(function () use ($product, $validated) {
@@ -103,6 +111,8 @@ class ProductController extends Controller
      */
     public function destroy(Product $product): JsonResponse
     {
+        $this->authorize('delete', $product);
+
         $this->transaction(fn () => $product->delete());
 
         return $this->success(null, 'تم حذف المنتج');
