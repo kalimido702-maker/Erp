@@ -18,6 +18,7 @@ class UserResource extends JsonResource
             'is_active'  => $this->is_active,
             'branch_id'  => $this->branch_id,
             'company_id' => $this->company_id,
+            'two_factor_enabled' => $this->hasTwoFactorEnabled(),
             'roles'      => $this->getRoleNames(),
             'permissions'=> $this->getAllPermissions()->pluck('name'),
             'created_at' => $this->created_at?->toISOString(),
