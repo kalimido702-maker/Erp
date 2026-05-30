@@ -6,10 +6,14 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Thin base class that gives each module service a typed query entry-point.
  * Modules extend this and override/add methods; no forced pattern is imposed.
+ *
+ * All write methods are wrapped in DB transactions so a partial failure can
+ * never persist inconsistent data — critical for an accounting/ERP system.
  */
 abstract class BaseService
 {
@@ -43,17 +47,19 @@ abstract class BaseService
 
     public function create(array $data): Model
     {
-        return $this->modelClass()::create($data);
+        return DB::transaction(fn () => $this->modelClass()::create($data));
     }
 
     public function update(Model $model, array $data): Model
     {
-        $model->update($data);
-        return $model->fresh();
+        return DB::transaction(function () use ($model, $data) {
+            $model->update($data);
+            return $model->fresh();
+        });
     }
 
     public function delete(Model $model): void
     {
-        $model->delete();
+        DB::transaction(fn () => $model->delete());
     }
 }
