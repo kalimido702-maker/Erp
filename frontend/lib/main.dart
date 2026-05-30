@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/di/injection.dart';
+import 'core/offline/field_encryptor.dart';
 import 'core/offline/local_database.dart';
 import 'core/offline/sync_manager.dart';
 import 'core/routes/app_router.dart';
@@ -14,8 +15,15 @@ void main() async {
   await EasyLocalization.ensureInitialized();
   await configureDependencies();
 
-  // Open local SQLite database
+  // Fix #4: Initialize AES encryptor before opening DB.
+  // Key is generated on first run and stored in Android Keystore / iOS Keychain.
+  await FieldEncryptor.instance.init();
+
+  // Open local SQLite database (schema creation/migration runs here)
   await LocalDatabase.instance.db;
+
+  // Fix #8: Clean expired normalized_entities on startup (bounded DB size)
+  await LocalDatabase.instance.cleanExpiredNormalized();
 
   runApp(
     EasyLocalization(
@@ -34,10 +42,7 @@ class ErpApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
-
-    // Boot the connectivity watcher and sync manager eagerly
-    ref.watch(syncManagerProvider);
-
+    ref.watch(syncManagerProvider); // boot eagerly
     return ScreenUtilInit(
       designSize: const Size(1440, 900),
       minTextAdapt: true,
