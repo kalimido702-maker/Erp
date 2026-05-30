@@ -1,8 +1,13 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+// Daily database backup at 02:00, keeping the last 7 dumps.
+Schedule::command('backup:run --keep=7')
+    ->dailyAt('02:00')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// Prune Telescope entries older than 48h to keep the dev DB small.
+Schedule::command('telescope:prune --hours=48')
+    ->daily();
