@@ -18,6 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
 
+        // Always-on hardening headers + general API rate limit on every /api route.
+        $middleware->api(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
+            'throttle:api',
+        ]);
+
         $middleware->alias([
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
@@ -29,4 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            return (new \App\Exceptions\ApiExceptionRenderer)->render($e, $request);
+        });
     })->create();

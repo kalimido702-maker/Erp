@@ -4,12 +4,13 @@ namespace Modules\Inventory\Models;
 
 use App\Traits\Auditable;
 use App\Traits\BelongsToTenant;
+use App\Traits\HasAttachments;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
-    use BelongsToTenant, Auditable, SoftDeletes;
+    use BelongsToTenant, Auditable, HasAttachments, SoftDeletes;
 
     protected $fillable = [
         'company_id', 'name', 'sku', 'barcode', 'category',

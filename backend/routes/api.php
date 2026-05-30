@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
@@ -9,8 +10,12 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::prefix('v1')->group(function () {
 
+    // Infrastructure health probe (DB + cache)
+    Route::get('health', \App\Http\Controllers\Api\HealthController::class);
+
     Route::prefix('auth')->group(function () {
-        Route::post('login', [AuthController::class, 'login']);
+        // Brute-force protection: 5 attempts / minute per email+IP.
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
     });
 
     // Protected routes
@@ -42,6 +47,11 @@ Route::prefix('v1')->group(function () {
             Route::get('audit-logs/{type}/{id}', [AuditLogController::class, 'forModel']);
             Route::get('company', [CompanyController::class, 'show']);
             Route::put('company', [CompanyController::class, 'update']);
+
+            // Polymorphic file attachments (works for any morph-mapped model)
+            Route::get('attachments/{type}/{id}', [AttachmentController::class, 'index']);
+            Route::post('attachments', [AttachmentController::class, 'store']);
+            Route::delete('attachments/{attachment}', [AttachmentController::class, 'destroy']);
         });
     });
 });
