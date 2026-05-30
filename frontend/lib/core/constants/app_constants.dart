@@ -17,6 +17,9 @@ abstract class ApiEndpoints {
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
   static const String refresh = '/auth/refresh';
+  static const String twoFactorEnable = '/auth/2fa/enable';
+  static const String twoFactorConfirm = '/auth/2fa/confirm';
+  static const String twoFactorDisable = '/auth/2fa/disable';
 
   // Settings
   static const String settings = '/settings';
