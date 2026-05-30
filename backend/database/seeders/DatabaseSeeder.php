@@ -55,5 +55,8 @@ class DatabaseSeeder extends Seeder
         }
 
         $user->assignRole($superAdmin);
+
+        // Realistic demo data (skipped automatically in production)
+        $this->call(DemoSeeder::class);
     }
 }

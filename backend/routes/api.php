@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PdfController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -41,6 +42,9 @@ Route::prefix('v1')->group(function () {
         Route::post('broadcasting/auth', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Support\Facades\Broadcast::auth($request);
         });
+
+        // PDF generation (allowlisted views only)
+        Route::post('pdf/generate', [PdfController::class, 'generate']);
 
         Route::middleware('tenant')->group(function () {
             Route::get('audit-logs', [AuditLogController::class, 'index']);
