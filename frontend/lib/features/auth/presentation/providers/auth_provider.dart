@@ -1,10 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/realtime/realtime_service.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
+import '../../data/models/user_model.dart';
 import '../../domain/entities/user_entity.dart';
 
 part 'auth_provider.g.dart';
@@ -20,12 +25,24 @@ class AuthState extends _$AuthState {
     try {
       final ds = ref.read(authDatasourceProvider);
       final model = await ds.getMe();
+      await _cacheUser(model);
       final entity = model.toEntity();
       await _startRealtime(entity, token);
       return entity;
-    } catch (_) {
-      await storage.delete(key: AppConstants.tokenKey);
+    } on UnauthorizedFailure {
+      // 401 → the token is genuinely invalid/expired: clear the session.
+      await _clearSession();
       return null;
+    } catch (_) {
+      // Network/server error (e.g. offline launch). The token is still valid,
+      // so DO NOT log the user out — restore the last known user from cache so
+      // the app opens authenticated and offline-first. Only fall back to login
+      // if we have never cached a user on this device.
+      final cached = await _cachedUser();
+      if (cached != null) {
+        await _startRealtime(cached, token);
+      }
+      return cached;
     }
   }
 
@@ -37,6 +54,7 @@ class AuthState extends _$AuthState {
     state = await AsyncValue.guard(() async {
       final result = await ds.login(email, password);
       await storage.write(key: AppConstants.tokenKey, value: result.token);
+      await _cacheUser(result.user);
       final entity = result.user.toEntity();
       await _startRealtime(entity, result.token);
       return entity;
@@ -44,7 +62,6 @@ class AuthState extends _$AuthState {
   }
 
   Future<void> logout() async {
-    final storage = ref.read(secureStorageProvider);
     final ds = ref.read(authDatasourceProvider);
 
     ref.read(realtimeServiceProvider).disconnect();
@@ -53,8 +70,32 @@ class AuthState extends _$AuthState {
       await ds.logout();
     } catch (_) {}
 
-    await storage.delete(key: AppConstants.tokenKey);
+    await _clearSession();
     state = const AsyncData(null);
+  }
+
+  // ── session persistence helpers ──────────────────────────────────────
+
+  Future<void> _cacheUser(UserModel model) async {
+    final storage = ref.read(secureStorageProvider);
+    await storage.write(key: AppConstants.userKey, value: jsonEncode(model.toJson()));
+  }
+
+  Future<UserEntity?> _cachedUser() async {
+    final storage = ref.read(secureStorageProvider);
+    final raw = await storage.read(key: AppConstants.userKey);
+    if (raw == null) return null;
+    try {
+      return UserModel.fromJson(jsonDecode(raw) as Map<String, dynamic>).toEntity();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _clearSession() async {
+    final storage = ref.read(secureStorageProvider);
+    await storage.delete(key: AppConstants.tokenKey);
+    await storage.delete(key: AppConstants.userKey);
   }
 
   /// Open the realtime channel for the user's company so push notifications
