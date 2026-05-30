@@ -11,10 +11,27 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * @group Auth
+ *
+ * Endpoints for authentication and session management.
+ */
 class AuthController extends Controller
 {
     use ApiResponse;
 
+    /**
+     * Login
+     *
+     * Authenticate with email + password and receive a Sanctum bearer token.
+     * The token expires after 30 days. Any previous token for the same device is revoked.
+     *
+     * @unauthenticated
+     * @response 200 {"success":true,"message":"تم تسجيل الدخول بنجاح","data":{"token":"1|abc...","user":{"id":1,"name":"Admin","email":"admin@erp.local","company_id":1}}}
+     * @response 401 {"success":false,"message":"بيانات الدخول غير صحيحة"}
+     * @response 403 {"success":false,"message":"الحساب موقوف، تواصل مع المسؤول"}
+     * @response 429 {"success":false,"message":"Too Many Requests"}
+     */
     public function login(LoginRequest $request): JsonResponse
     {
         $user = User::where('email', $request->email)->first();
@@ -37,6 +54,13 @@ class AuthController extends Controller
         ], 'تم تسجيل الدخول بنجاح');
     }
 
+    /**
+     * Logout
+     *
+     * Revoke the current access token.
+     *
+     * @response 200 {"success":true,"message":"تم تسجيل الخروج","data":null}
+     */
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
@@ -44,11 +68,25 @@ class AuthController extends Controller
         return $this->success(null, 'تم تسجيل الخروج');
     }
 
+    /**
+     * Get authenticated user
+     *
+     * Returns the profile of the currently authenticated user.
+     *
+     * @response 200 {"success":true,"message":"Success","data":{"id":1,"name":"Admin","email":"admin@erp.local","company_id":1}}
+     */
     public function me(Request $request): JsonResponse
     {
         return $this->success(new UserResource($request->user()));
     }
 
+    /**
+     * Refresh token
+     *
+     * Revoke the current token and issue a new one with a fresh 30-day expiry.
+     *
+     * @response 200 {"success":true,"message":"تم تجديد الجلسة","data":{"token":"2|xyz..."}}
+     */
     public function refresh(Request $request): JsonResponse
     {
         $user = $request->user();

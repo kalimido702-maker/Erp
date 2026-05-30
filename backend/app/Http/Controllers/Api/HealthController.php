@@ -9,13 +9,23 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Lightweight liveness/readiness probe for load balancers, Docker health
- * checks and uptime monitors. Public (no auth) so infra can reach it.
+ * @group System
+ *
+ * Infrastructure probes — public endpoints for load balancers and uptime monitors.
  */
 class HealthController extends Controller
 {
     use ApiResponse;
 
+    /**
+     * Health check
+     *
+     * Checks database connectivity and cache read/write. Returns 503 if any service is down.
+     *
+     * @unauthenticated
+     * @response 200 {"success":true,"status":"ok","checks":{"database":"up","cache":"up"},"time":"2026-05-30T10:00:00+00:00"}
+     * @response 503 {"success":false,"status":"degraded","checks":{"database":"down","cache":"up"},"time":"2026-05-30T10:00:00+00:00"}
+     */
     public function __invoke(): JsonResponse
     {
         $checks = [

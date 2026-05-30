@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Always-on hardening headers + general API rate limit on every /api route.
         $middleware->api(append: [
             \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\SentryContext::class,
             'throttle:api',
         ]);
 
@@ -32,6 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Sentry: report unhandled exceptions to the error tracker (production).
+        \Sentry\Laravel\Integration::handles($exceptions);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );

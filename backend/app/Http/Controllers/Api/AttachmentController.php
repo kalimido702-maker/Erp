@@ -12,11 +12,22 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @group Attachments
+ *
+ * Polymorphic file attachments — attach files to any morph-mapped model (products, invoices, etc.).
+ */
 class AttachmentController extends Controller
 {
     use ApiResponse;
 
-    /** List attachments for a given parent model. */
+    /**
+     * List attachments
+     *
+     * @urlParam type string required Morph alias of the parent model (e.g. `products`). Example: products
+     * @urlParam id integer required Parent model ID. Example: 1
+     * @response 200 {"success":true,"message":"Success","data":[{"id":1,"filename":"spec.pdf","mime_type":"application/pdf","size":204800,"url":"http://localhost/storage/attachments/spec.pdf"}]}
+     */
     public function index(Request $request, string $type, string $id): JsonResponse
     {
         $parent = $this->resolveParent($type, $id);
@@ -24,7 +35,18 @@ class AttachmentController extends Controller
         return $this->success($parent->attachments()->latest()->get());
     }
 
-    /** Upload and attach a file to a parent model. */
+    /**
+     * Upload attachment
+     *
+     * Upload a file and attach it to a parent model. Max size: 10 MB.
+     *
+     * @bodyParam type string required Morph alias of the parent. Example: products
+     * @bodyParam id integer required Parent model ID. Example: 1
+     * @bodyParam file file required The file to upload. Max 10 MB.
+     * @bodyParam collection string optional Logical collection name (default: `default`). Example: specs
+     *
+     * @response 201 {"success":true,"message":"تم رفع الملف","data":{"id":1,"filename":"spec.pdf","url":"http://localhost/storage/attachments/spec.pdf"}}
+     */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -44,7 +66,14 @@ class AttachmentController extends Controller
         return $this->success($attachment, 'تم رفع الملف', 201);
     }
 
-    /** Delete an attachment (and its underlying file). */
+    /**
+     * Delete attachment
+     *
+     * Deletes the record and the underlying file from storage.
+     *
+     * @urlParam attachment integer required Attachment ID. Example: 1
+     * @response 200 {"success":true,"message":"تم حذف الملف","data":null}
+     */
     public function destroy(Attachment $attachment): JsonResponse
     {
         // Tenant scope on Attachment already prevents cross-company access,

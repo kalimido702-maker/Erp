@@ -10,10 +10,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Generic PDF endpoint used by all modules.
+ * @group PDF
  *
- * Each module sends { view, data, filename, mode } in the request body.
- * Only trusted views are allowed (allowlist) to prevent arbitrary template injection.
+ * Server-side PDF generation from allowlisted Blade templates.
  */
 class PdfController extends Controller
 {
@@ -27,8 +26,18 @@ class PdfController extends Controller
     public function __construct(private readonly PdfService $pdf) {}
 
     /**
-     * POST /api/v1/pdf/generate
-     * Body: { view, data, filename?, mode? }  mode = stream|download|base64
+     * Generate PDF
+     *
+     * Renders a Blade template as PDF. Use `mode=base64` for JSON API (mobile/web apps),
+     * `stream` to display inline in the browser, or `download` to force-download.
+     *
+     * @bodyParam view string required The template to render. Allowed: `pdf.invoice`, `pdf.report`. Example: pdf.invoice
+     * @bodyParam data object required Template data (structure depends on the chosen view).
+     * @bodyParam filename string optional Output filename when mode is `download`. Example: invoice-001.pdf
+     * @bodyParam mode string optional Output mode: `stream`, `download`, or `base64`. Defaults to `stream`. Example: base64
+     *
+     * @response 200 scenario="mode=base64" {"success":true,"message":"Success","data":{"pdf":"JVBERi0x..."}}
+     * @response 200 scenario="mode=stream/download" Binary PDF file stream
      */
     public function generate(Request $request): StreamedResponse|JsonResponse
     {
