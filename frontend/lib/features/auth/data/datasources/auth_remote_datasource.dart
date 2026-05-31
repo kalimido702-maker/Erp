@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:injectable/injectable.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/error_handler.dart';
@@ -7,7 +6,10 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/user_model.dart';
 
-@injectable
+// Wired through Riverpod (authDatasourceProvider), not get_it/injectable —
+// it depends on ApiClient which is a Riverpod provider, so an @injectable
+// annotation here would make injectable_generator emit code that can't resolve
+// ApiClient from get_it.
 class AuthRemoteDatasource {
   final ApiClient _client;
 
