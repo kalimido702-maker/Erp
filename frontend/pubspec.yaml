@@ -95,12 +95,7 @@ flutter:
     - assets/translations/
 
   fonts:
+    # Cairo as a single variable font (weight axis covers 300–700).
     - family: Cairo
       fonts:
-        - asset: assets/fonts/Cairo-Regular.ttf
-        - asset: assets/fonts/Cairo-Bold.ttf
-          weight: 700
-        - asset: assets/fonts/Cairo-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Cairo-Light.ttf
-          weight: 300
+        - asset: assets/fonts/Cairo-Variable.ttf

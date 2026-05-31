@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
@@ -60,9 +59,9 @@ class PrintingService {
 
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PdfPreviewPage(
+        builder: (_) => _PdfLayoutPreviewPage(
           title: title,
-          build: (_) => buildPdf(regular, bold),
+          onBuild: (_) => buildPdf(regular, bold),
         ),
       ),
     );
@@ -229,17 +228,21 @@ class PrintingService {
   }
 }
 
-class PdfPreviewPage extends StatelessWidget {
+/// Lightweight inline preview used by [PrintingService.previewPdf].
+/// Private + distinct name to avoid clashing with the richer
+/// `PdfPreviewPage` in shared/pages/, and to avoid a field named `build`
+/// colliding with `StatelessWidget.build`.
+class _PdfLayoutPreviewPage extends StatelessWidget {
   final String title;
-  final LayoutCallback build;
+  final LayoutCallback onBuild;
 
-  const PdfPreviewPage({super.key, required this.title, required this.build});
+  const _PdfLayoutPreviewPage({required this.title, required this.onBuild});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: PdfPreview(build: build),
+      body: PdfPreview(build: onBuild),
     );
   }
 }
