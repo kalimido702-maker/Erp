@@ -44,7 +44,7 @@ class InvoiceData {
   });
 
   double get subtotal =>
-      items.fold(0, (s, i) => s + i.qty * i.unitPrice - i.discount);
+      items.fold<double>(0, (s, i) => s + i.qty * i.unitPrice - i.discount);
   double get taxAmount => subtotal * (taxRate / 100);
   double get total => subtotal + taxAmount;
 }

@@ -27,3 +27,9 @@ Homestead.yaml
 Thumbs.db
 /storage/app/backups/*
 !/storage/app/backups/.gitignore
+
+# Scribe-generated API docs (regenerated in CI)
+/.scribe
+/public/vendor/scribe
+/resources/views/scribe
+/public/docs

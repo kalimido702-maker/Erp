@@ -51,7 +51,6 @@ dependencies:
 
   # Date & Time
   intl: ^0.19.0
-  shamsi_jalaali: ^0.11.0
 
   # Utils
   equatable: ^2.0.5
