@@ -12,14 +12,17 @@ return new class extends Migration
             $table->string('phone')->nullable()->after('email');
             $table->string('avatar')->nullable()->after('phone');
             $table->boolean('is_active')->default(true)->after('avatar');
-            $table->foreignId('branch_id')->nullable()->constrained('branches')->nullOnDelete();
+            // NOTE: branch_id + its FK are added in a separate later migration,
+            // AFTER the `branches` table is created. MySQL refuses a foreign key
+            // that references a table which does not yet exist; SQLite silently
+            // allowed it, which is why this only surfaced in CI on MySQL.
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['phone', 'avatar', 'is_active', 'branch_id']);
+            $table->dropColumn(['phone', 'avatar', 'is_active']);
         });
     }
 };
