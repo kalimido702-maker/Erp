@@ -26,7 +26,7 @@ class AuditTrailTest extends TestCase
 
     public function test_creating_a_product_writes_audit_log(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $user    = $this->userWithProductAccess($company);
 
         $this->actingAs($user)
@@ -42,7 +42,7 @@ class AuditTrailTest extends TestCase
 
     public function test_updating_a_product_records_old_and_new_values(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $user    = $this->userWithProductAccess($company);
         $product = Product::create(['name' => 'Old Name', 'price' => 10, 'company_id' => $company->id]);
 
@@ -58,7 +58,7 @@ class AuditTrailTest extends TestCase
 
     public function test_audit_log_endpoint_is_accessible(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $user    = User::factory()->create(['company_id' => $company->id]);
 
         $this->actingAs($user)

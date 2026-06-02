@@ -24,7 +24,7 @@ class AttachmentTest extends TestCase
     public function test_can_upload_attachment_to_a_product(): void
     {
         Storage::fake('public');
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $this->actingUser($company);
         $product = Product::create(['name' => 'P', 'price' => 1, 'company_id' => $company->id]);
 
@@ -49,7 +49,7 @@ class AttachmentTest extends TestCase
     public function test_oversized_file_is_rejected(): void
     {
         Storage::fake('public');
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $this->actingUser($company);
         $product = Product::create(['name' => 'P', 'price' => 1, 'company_id' => $company->id]);
 
@@ -62,7 +62,7 @@ class AttachmentTest extends TestCase
 
     public function test_unsupported_type_is_rejected(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $this->actingUser($company);
 
         $this->postJson('/api/v1/attachments', [
@@ -75,7 +75,7 @@ class AttachmentTest extends TestCase
     public function test_deleting_attachment_removes_file(): void
     {
         Storage::fake('public');
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $this->actingUser($company);
         $product = Product::create(['name' => 'P', 'price' => 1, 'company_id' => $company->id]);
 
@@ -91,8 +91,8 @@ class AttachmentTest extends TestCase
     public function test_cannot_access_other_company_attachment(): void
     {
         Storage::fake('public');
-        $companyA = Company::factory()->create();
-        $companyB = Company::factory()->create();
+        $companyA = Company::factory()->withSubscription()->create();
+        $companyB = Company::factory()->withSubscription()->create();
 
         // Attachment owned by company B
         $userB = User::factory()->create(['company_id' => $companyB->id]);

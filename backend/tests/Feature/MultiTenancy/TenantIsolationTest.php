@@ -25,8 +25,8 @@ class TenantIsolationTest extends TestCase
 
     public function test_users_only_see_their_own_company_products(): void
     {
-        $companyA = Company::factory()->create();
-        $companyB = Company::factory()->create();
+        $companyA = Company::factory()->withSubscription()->create();
+        $companyB = Company::factory()->withSubscription()->create();
         $userA    = $this->makeUser($companyA);
         $userB    = $this->makeUser($companyB);
 
@@ -47,8 +47,8 @@ class TenantIsolationTest extends TestCase
 
     public function test_user_cannot_access_other_company_product(): void
     {
-        $companyA = Company::factory()->create();
-        $companyB = Company::factory()->create();
+        $companyA = Company::factory()->withSubscription()->create();
+        $companyB = Company::factory()->withSubscription()->create();
         $userA    = $this->makeUser($companyA);
         $productB = Product::create(['name' => 'B Product', 'price' => 10, 'company_id' => $companyB->id]);
 
@@ -59,7 +59,7 @@ class TenantIsolationTest extends TestCase
 
     public function test_product_auto_assigns_company_id_on_create(): void
     {
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $user    = $this->makeUser($company);
 
         $this->actingAs($user)

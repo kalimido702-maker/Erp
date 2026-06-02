@@ -3,58 +3,33 @@
 namespace Database\Seeders;
 
 use App\Models\Company;
+use App\Models\Plan;
 use App\Models\User;
+use App\Services\TenantProvisioningService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'sanctum']);
-        $admin      = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'sanctum']);
-        $employee   = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'sanctum']);
+        // 1. Seed plans first — provisioning depends on the starter plan existing.
+        $this->call(PlanSeeder::class);
 
-        $permissions = [
-            'users.view', 'users.create', 'users.edit', 'users.delete',
-            'roles.view', 'roles.create', 'roles.edit', 'roles.delete',
-            'branches.view', 'branches.create', 'branches.edit', 'branches.delete',
-            'settings.view', 'settings.edit',
-            // Inventory
-            'products.view', 'products.create', 'products.edit', 'products.delete',
-        ];
-
-        foreach ($permissions as $perm) {
-            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'sanctum']);
-        }
-
-        // super-admin: everything (also bypasses via policy before() hook).
-        $superAdmin->syncPermissions(Permission::all());
-
-        // admin: full module access, no role/user administration.
-        $admin->syncPermissions(Permission::whereNotIn('name', [
-            'users.delete', 'roles.create', 'roles.edit', 'roles.delete',
-        ])->get());
-
-        // employee: read + day-to-day create/edit, but NOT delete.
-        $employee->syncPermissions([
-            'products.view', 'products.create', 'products.edit',
-            'branches.view', 'settings.view',
-        ]);
-
+        // 2. Create the default demo company + platform admin.
         $company = Company::firstOrCreate(
             ['slug' => 'default'],
             [
                 'name'      => 'Default Company',
                 'email'     => 'company@erp.local',
                 'currency'  => 'SAR',
+                'timezone'  => 'Asia/Riyadh',
+                'locale'    => 'ar',
                 'is_active' => true,
+                'status'    => 'active',
             ]
         );
 
-        $user = User::firstOrCreate(
+        $admin = User::firstOrCreate(
             ['email' => 'admin@erp.local'],
             [
                 'name'       => 'Super Admin',
@@ -64,13 +39,32 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        if (! $user->company_id) {
-            $user->update(['company_id' => $company->id]);
+        if (! $admin->company_id) {
+            $admin->update(['company_id' => $company->id]);
         }
 
-        $user->assignRole($superAdmin);
+        // 3. Provision the company (roles, permissions, subscription).
+        //    Idempotent — safe to re-run.
+        $plan = Plan::where('slug', 'enterprise')->first();
+        app(TenantProvisioningService::class)->provision($company, $admin, $plan);
 
-        // Realistic demo data (skipped automatically in production)
+        // Override the trial subscription with a permanent active one for the demo.
+        $company->subscriptions()->update(['status' => 'active', 'expires_at' => null]);
+        $company->update(['status' => 'active']);
+
+        // 4. Create the platform admin (no company, manages the SaaS platform itself).
+        User::firstOrCreate(
+            ['email' => 'platform@erp.local'],
+            [
+                'name'              => 'Platform Admin',
+                'password'          => bcrypt('Platform@1234'),
+                'is_active'         => true,
+                'is_platform_admin' => true,
+                'company_id'        => null,
+            ]
+        );
+
+        // 5. Realistic demo data (skipped automatically in production).
         $this->call(DemoSeeder::class);
     }
 }

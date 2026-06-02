@@ -16,7 +16,7 @@ class ProductCrudTest extends TestCase
     /** A user that holds every product permission (CRUD behaviour under test, not authz). */
     private function actingUser(): User
     {
-        $company = Company::factory()->create();
+        $company = Company::factory()->withSubscription()->create();
         $user = User::factory()->create(['company_id' => $company->id]);
 
         foreach (['products.view', 'products.create', 'products.edit', 'products.delete'] as $perm) {

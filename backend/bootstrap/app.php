@@ -26,10 +26,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-            'tenant'     => \App\Http\Middleware\SetTenantFromAuth::class,
+            'role'                => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission'          => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission'  => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'tenant'              => \App\Http\Middleware\SetTenantFromAuth::class,
+            'module'              => \App\Http\Middleware\CheckModuleAccess::class,
+            'subscription.active' => \App\Http\Middleware\CheckSubscriptionActive::class,
+            'platform.admin'      => \App\Http\Middleware\RequirePlatformAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

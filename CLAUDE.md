@@ -9,8 +9,10 @@
 
 ## 1. What this project is
 
-A **large, cross-platform ERP system** built to be production-grade from the
-foundation up. It is **offline-first**, **multi-tenant**, and **fully audited**.
+A **SaaS multi-tenant ERP platform**. Companies (tenants) self-register, pick a plan,
+and get access to the modules included in their subscription — with zero programming
+required. The platform is built to be production-grade from the foundation up:
+**offline-first**, **multi-tenant**, **fully audited**, and **subscription-gated**.
 
 | Layer | Technology |
 |-------|-----------|
@@ -31,7 +33,73 @@ foundation, never by weakening it.
 
 ---
 
-## 2. The 12 Non-Negotiable Rules
+## 2. The SaaS Model (non-negotiable architecture)
+
+### Two distinct user types
+
+| Type | Field | Description |
+|------|-------|-------------|
+| **Platform Admin** | `users.is_platform_admin = true` | Manages the SaaS platform itself. No `company_id`. Can list/suspend/activate companies, assign plans. |
+| **Company User** | `users.company_id = X` | Belongs to one tenant. Subject to subscription + module gates. |
+
+**Never mix them.** A platform admin is NOT a company super-admin.
+
+### Tenant lifecycle
+
+```
+Self-Register (POST /v1/register)
+    → Company created (status=trial)
+    → TenantProvisioningService runs:
+        - Default roles seeded (super-admin, admin, employee)
+        - Permissions seeded for all modules
+        - Admin user assigned super-admin role
+        - Trial subscription created on Starter plan (14 days)
+    → Token returned immediately (no email confirmation required)
+
+Platform Admin assigns plan
+    → POST /v1/platform/companies/{id}/plan
+    → subscription status → active
+
+Company suspended/cancelled
+    → all users get 402 on every tenant route
+```
+
+### Subscription & module access
+
+Every protected route goes through **three middleware layers** in order:
+
+```
+auth:sanctum → tenant → subscription.active → module:{name}
+```
+
+| Middleware | Alias | What it checks |
+|-----------|-------|----------------|
+| `SetTenantFromAuth` | `tenant` | Binds `tenant.company_id` from auth user |
+| `CheckSubscriptionActive` | `subscription.active` | 402 if expired/suspended/cancelled |
+| `CheckModuleAccess` | `module:{name}` | 402 if plan doesn't include the module |
+| `RequirePlatformAdmin` | `platform.admin` | 403 if not `is_platform_admin` |
+
+Platform admins bypass both `subscription.active` and `module` checks entirely.
+
+### Plans
+
+Defined in the `plans` table, seeded by `PlanSeeder`. Three tiers out of the box:
+
+| Slug | Modules | Max Users |
+|------|---------|-----------|
+| `starter` | inventory, sales | 3 |
+| `growth` | inventory, sales, purchases, hr | 15 |
+| `enterprise` | all modules | unlimited |
+
+To add a new plan: add a row in `PlanSeeder` and re-run `php artisan db:seed --class=PlanSeeder`.
+
+### Available module names (strings used in middleware + plan JSON)
+
+`inventory` · `sales` · `purchases` · `hr` · `finance` · `accounting`
+
+---
+
+## 3. The 12 Non-Negotiable Rules
 
 These are **hard constraints**. Breaking any of them is a bug, even if the code "works".
 
@@ -66,7 +134,7 @@ These are **hard constraints**. Breaking any of them is a bug, even if the code 
    be traceable.
 
 9. **No breaking changes to `v1`.** Additions are fine; renames/removals require a
-   new version prefix (see §9). Mobile clients in the wild depend on v1.
+   new version prefix (see §10). Mobile clients in the wild depend on v1.
 
 10. **Offline-first on the client.** The Flutter app must remain usable offline:
     cached reads, queued writes, automatic sync. Never assume connectivity.
@@ -80,7 +148,7 @@ These are **hard constraints**. Breaking any of them is a bug, even if the code 
 
 ---
 
-## 3. Repository layout
+## 4. Repository layout
 
 ```
 Erp/
@@ -91,10 +159,11 @@ Erp/
 ├── backend/                   ← Laravel 13
 │   ├── app/
 │   │   ├── Http/Controllers/Api/   ← shared (cross-module) controllers
-│   │   ├── Http/Middleware/        ← SecurityHeaders, SetTenantFromAuth, SentryContext
+│   │   ├── Http/Middleware/        ← SecurityHeaders, SetTenantFromAuth, SentryContext,
+│   │   │                              CheckModuleAccess, CheckSubscriptionActive, RequirePlatformAdmin
 │   │   ├── Http/Resources/         ← API resources (UserResource, …)
-│   │   ├── Models/                 ← Company, User, AuditLog, Attachment
-│   │   ├── Services/               ← BaseService, PdfService, TwoFactorService
+│   │   ├── Models/                 ← Company, User, Plan, CompanySubscription, AuditLog, Attachment
+│   │   ├── Services/               ← BaseService, PdfService, TwoFactorService, TenantProvisioningService
 │   │   ├── Policies/               ← BasePolicy
 │   │   ├── Jobs/                   ← BaseJob, SendPdfEmailJob
 │   │   ├── Scopes/TenantScope.php
@@ -103,20 +172,23 @@ Erp/
 │   │   │                              HasAttachments, HandlesTransactions
 │   │   └── Console/Commands/       ← BackupDatabase
 │   ├── config/                     ← api.php, morph_map.php, cors.php, reverb.php, …
-│   ├── database/migrations|seeders|factories
+│   ├── database/
+│   │   ├── migrations/             ← ordered by date
+│   │   ├── seeders/                ← DatabaseSeeder, PlanSeeder, DemoSeeder
+│   │   └── factories/              ← CompanyFactory (use .withSubscription() in tests)
 │   ├── routes/api.php              ← shared routes (everything under prefix v1)
-│   ├── Modules/<Name>/             ← one folder per module (see §6)
-│   └── tests/Feature/…             ← grouped by domain
+│   ├── Modules/<Name>/             ← one folder per module (see §7)
+│   └── tests/Feature/…             ← grouped by domain (SaaS/, Auth/, Inventory/, …)
 └── frontend/                  ← Flutter
     └── lib/
         ├── core/              ← constants, network, offline, realtime, pdf, theme, routes
-        ├── features/<name>/   ← clean architecture per feature (see §7)
+        ├── features/<name>/   ← clean architecture per feature (see §8)
         └── shared/            ← widgets, pages, models reused across features
 ```
 
 ---
 
-## 4. Core building blocks (use these — don't reinvent)
+## 5. Core building blocks (use these — don't reinvent)
 
 ### Backend traits & helpers
 
@@ -132,6 +204,7 @@ Erp/
 | `BaseJob` | 3 retries, backoff, failure logging | `extends BaseJob` |
 | `TenantContext::companyId()` | Current tenant id (container OR auth user) | Read-only, anywhere |
 | `PdfService` | `stream()/download()/base64()/bytes()` from a Blade view | inject in controller |
+| `TenantProvisioningService` | Full tenant setup (roles, permissions, subscription) | inject + call `provision($company, $admin, $plan)` |
 
 ### `ApiResponse` shapes
 
@@ -149,7 +222,7 @@ this** — it's a security fix.
 
 ---
 
-## 5. Database conventions
+## 6. Database conventions
 
 - Every tenant table starts with:
   ```php
@@ -164,7 +237,7 @@ this** — it's a security fix.
 
 ---
 
-## 6. How to build a BACKEND module (step by step)
+## 7. How to build a BACKEND module (step by step)
 
 > Example: adding a `Customer` entity to the **Sales** module.
 
@@ -214,7 +287,8 @@ class CustomerPolicy extends BasePolicy
   ```php
   Gate::policy(Customer::class, CustomerPolicy::class);
   ```
-- **Seed the permissions** (`customers.{view,create,edit,delete}`) in `DatabaseSeeder` and assign them to roles. Permissions/roles use the **`sanctum` guard** (see §8).
+- **Add the permissions** (`customers.{view,create,edit,delete}`) to `TenantProvisioningService::TENANT_PERMISSIONS`
+  and assign them to the appropriate roles inside `createCompanyRoles()`.
 
 **5. Controller** — `Modules/Sales/app/Http/Controllers/CustomerController.php`:
 - `use ApiResponse, HandlesTransactions;`
@@ -226,16 +300,20 @@ class CustomerPolicy extends BasePolicy
 
 **6. Routes** — `Modules/Sales/routes/api.php`:
 ```php
-Route::middleware(['auth:sanctum', 'tenant'])->prefix('v1')->group(function () {
-    Route::apiResource('sales/customers', CustomerController::class);
-});
+Route::middleware(['auth:sanctum', 'tenant', 'subscription.active', 'module:sales'])
+    ->prefix('v1')
+    ->group(function () {
+        Route::apiResource('sales/customers', CustomerController::class);
+    });
 ```
-> **Always** include both `auth:sanctum` and `tenant` middleware.
+> **Always** use all four middleware: `auth:sanctum`, `tenant`, `subscription.active`, `module:{name}`.
 
 **7. Factory + Seeder** for tests and demo data (add realistic Arabic data to `DemoSeeder`).
 
 **8. Tests** — `tests/Feature/Sales/CustomerCrudTest.php`:
 - Create, update (assert it modifies, not duplicates), delete, validation, **cross-tenant isolation**.
+- Use `Company::factory()->withSubscription()->create()` — never bare `Company::factory()->create()`
+  for routes behind `subscription.active` or `module:*` middleware.
 
 **9. If the model needs attachments:** register it in `config/morph_map.php`:
 ```php
@@ -246,7 +324,7 @@ return ['products' => Product::class, 'customers' => Customer::class];
 
 ---
 
-## 7. How to build a FRONTEND feature (Flutter)
+## 8. How to build a FRONTEND feature (Flutter)
 
 Each feature follows **clean architecture** under `lib/features/<name>/`:
 
@@ -280,9 +358,10 @@ features/customers/
 
 ---
 
-## 8. Auth, roles & 2FA
+## 9. Auth, roles & 2FA
 
 - **Login:** `POST /v1/auth/login` → `{ token, user }`. Tokens expire in 30 days.
+- **Registration:** `POST /v1/register` → creates company + admin user + trial subscription → `{ token, user, company }`.
 - **2FA (TOTP):** if a user has confirmed 2FA, login returns `422` with
   `errors.two_factor_required = [true]`; resend with `code` (TOTP or a single-use
   recovery code). Manage via `/v1/auth/2fa/{enable,confirm,disable}`.
@@ -293,14 +372,14 @@ features/customers/
   otherwise checks silently fall back to the wrong guard.
 - Seeded roles: `super-admin` (all), `admin` (all modules, no user/role admin),
   `employee` (view + create/edit, **no delete**). Check with `$user->hasRole(...)`
-  / `hasPermissionTo(...)` or enforce via Policies (preferred — see §6 step 4–5).
+  / `hasPermissionTo(...)` or enforce via Policies (preferred — see §7 step 4–5).
 - **Authorization is mandatory, not optional.** Every module endpoint authorizes
   through its Policy. super-admin bypasses via `BasePolicy::before()`.
-- **Rate limits:** `login` = 5/min per email+IP; `api` = 90/min per user. Don't loosen.
+- **Rate limits:** `login` = 5/min per email+IP; `register` = 5/min; `api` = 90/min per user. Don't loosen.
 
 ---
 
-## 9. API versioning
+## 10. API versioning
 
 - Everything is under `/api/v1`. `config/api.php` holds the current version.
 - **Non-breaking** (new endpoint, new field): add to v1.
@@ -310,7 +389,7 @@ features/customers/
 
 ---
 
-## 10. Errors, security & monitoring
+## 11. Errors, security & monitoring
 
 - `ApiExceptionRenderer` converts ALL exceptions to the JSON envelope with correct
   status codes (422/401/403/404/405/429/500). Don't catch-and-swallow in controllers
@@ -321,7 +400,7 @@ features/customers/
 
 ---
 
-## 11. Realtime (notifications)
+## 12. Realtime (notifications)
 
 - Server: Reverb broadcasts on private channels `company.{id}` and `user.{id}`.
 - Events extend the broadcast pattern in `app/Events/ErpEvent.php`; notifications
@@ -333,7 +412,7 @@ features/customers/
 
 ---
 
-## 12. PDF & printing
+## 13. PDF & printing
 
 - Server: put a Blade template in `resources/views/pdf/`, add it to the **allowlist**
   in `PdfController`, generate via `PdfService`. `POST /v1/pdf/generate` supports
@@ -344,7 +423,7 @@ features/customers/
 
 ---
 
-## 13. Background jobs, scheduling & backups
+## 14. Background jobs, scheduling & backups
 
 - Long/heavy work (PDF emails, bulk ops) → a Job extending `BaseJob`, dispatched
   to the queue. Never block an HTTP request on heavy work.
@@ -354,7 +433,7 @@ features/customers/
 
 ---
 
-## 14. Commands you'll actually use
+## 15. Commands you'll actually use
 
 ```bash
 # Backend
@@ -362,6 +441,7 @@ php artisan test                         # run everything — MUST be green befo
 php artisan test tests/Feature/Sales/    # run one group
 php artisan migrate                       # apply migrations
 php artisan db:seed                       # base data (+ DemoSeeder, skipped in prod)
+php artisan db:seed --class=PlanSeeder    # re-seed plans only
 php artisan db:seed --class=DemoSeeder    # realistic demo data only
 php artisan scribe:generate               # regenerate API docs
 php artisan backup:run                    # manual DB backup
@@ -382,7 +462,7 @@ docker compose up -d
 
 ---
 
-## 15. Definition of Done (checklist for every change)
+## 16. Definition of Done (checklist for every change)
 
 - [ ] Tenant isolation respected (new model uses `BelongsToTenant`).
 - [ ] Multi-step writes wrapped in a transaction.
@@ -391,6 +471,9 @@ docker compose up -d
 - [ ] Auditable model uses the `Auditable` trait.
 - [ ] Scribe docblocks added to new endpoints.
 - [ ] Feature test(s) added; bug fixes have a regression test.
+- [ ] Tests use `Company::factory()->withSubscription()->create()` for tenant routes.
+- [ ] New module permissions added to `TenantProvisioningService::TENANT_PERMISSIONS`.
+- [ ] Module routes use all four middleware: `auth:sanctum`, `tenant`, `subscription.active`, `module:{name}`.
 - [ ] `php artisan test` is **green**.
 - [ ] Flutter: codegen run, `flutter analyze` clean, offline path considered.
 - [ ] New config in `.env.example` with safe defaults; no secrets committed.
@@ -399,12 +482,14 @@ docker compose up -d
 
 ---
 
-## 16. Current foundation status (already built — don't rebuild)
+## 17. Current foundation status (already built — don't rebuild)
 
 Multi-tenancy · Audit trail · Realtime notifications · Offline-first sync ·
 Auth + 2FA · Rate limiting · Security headers · Centralized error handling ·
 File attachments · Health checks · PDF generation · Queues + scheduler ·
 Demo seeders · Base Service/Policy/Job layers · API docs (Scribe) ·
-Telescope + Sentry · DB transactions · CORS · DB backups · Load tests · CI/CD.
+Telescope + Sentry · DB transactions · CORS · DB backups · Load tests · CI/CD ·
+**SaaS subscription engine** · **Plan management** · **Module access gating** ·
+**Tenant self-registration** · **TenantProvisioningService** · **Platform admin API**.
 
 **The foundation is production-grade. Build modules ON it — never weaken it.**
