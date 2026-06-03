@@ -13,12 +13,25 @@ class Company extends Model
 
     protected $fillable = [
         'name', 'slug', 'logo', 'email', 'phone', 'address',
-        'currency', 'timezone', 'locale', 'is_active', 'status',
+        'currency', 'timezone', 'locale', 'supported_locales', 'is_active', 'status',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'supported_locales' => 'array',
     ];
+
+    /**
+     * Languages this tenant offers, always including its default `locale`.
+     * Falls back to the platform defaults when unset.
+     */
+    public function supportedLocaleCodes(): array
+    {
+        $codes = $this->supported_locales ?: config('i18n.default_locales', ['ar', 'en']);
+        $default = $this->locale ?: config('i18n.fallback', 'ar');
+
+        return array_values(array_unique([$default, ...$codes]));
+    }
 
     public function users(): HasMany
     {

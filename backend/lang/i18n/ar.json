@@ -1,0 +1,58 @@
+{
+  "language": {
+    "name": "العربية",
+    "switch": "English"
+  },
+  "brand": {
+    "name": "شامل ERP",
+    "tagline": "نظام إدارة الموارد المؤسسية",
+    "headline": "أدِر عملك\nمن مكانٍ واحد",
+    "subtitle": "منصة ERP متكاملة تجمع المبيعات والمخزون والمحاسبة\nوالموارد البشرية في واجهة واحدة سلسة.",
+    "feature_inventory_title": "مخزون وفروع",
+    "feature_inventory_desc": "تتبع المخزون في الوقت الفعلي عبر جميع الفروع",
+    "feature_sales_title": "مبيعات وفواتير",
+    "feature_sales_desc": "إصدار فواتير احترافية وإدارة المدفوعات بسهولة",
+    "feature_reports_title": "تقارير وتحليلات",
+    "feature_reports_desc": "لوحات بيانات تفاعلية لدعم قرارات الأعمال",
+    "privacy": "سياسة الخصوصية",
+    "terms": "شروط الاستخدام",
+    "support": "الدعم الفني"
+  },
+  "auth": {
+    "welcome_back": "مرحبًا بعودتك",
+    "login": "تسجيل الدخول",
+    "login_short": "دخول",
+    "subtitle": "أدخل بياناتك للوصول إلى نظامك",
+    "subtitle_account": "أدخل بياناتك للوصول إلى حسابك",
+    "email": "البريد الإلكتروني",
+    "email_hint": "example@company.com",
+    "password": "كلمة المرور",
+    "remember_me": "تذكّرني",
+    "forgot_password": "نسيت كلمة المرور؟",
+    "biometric": "الدخول ببصمة الإصبع",
+    "no_account": "ليس لديك حساب؟ ",
+    "signup_free": "سجّل مجانًا",
+    "contact_admin": "تواصل مع مدير النظام",
+    "email_required": "البريد الإلكتروني مطلوب",
+    "email_invalid": "البريد الإلكتروني غير صحيح",
+    "password_required": "كلمة المرور مطلوبة",
+    "password_short": "كلمة المرور قصيرة جداً"
+  },
+  "common": {
+    "or": "أو",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "search": "بحث",
+    "view_all": "عرض الكل"
+  },
+  "modules": {
+    "inventory": "المخزون والمنتجات",
+    "sales": "المبيعات والفواتير",
+    "purchases": "المشتريات",
+    "hr": "الموارد البشرية",
+    "finance": "التقارير",
+    "accounting": "المحاسبة",
+    "settings": "الإعدادات",
+    "dashboard": "لوحة التحكم"
+  }
+}

@@ -20,6 +20,12 @@ Route::prefix('v1')->group(function () {
     // Public plans list (shown on pricing / registration page)
     Route::get('plans', [SubscriptionController::class, 'plans']);
 
+    // Localization — public so clients can load strings before login. Both are
+    // tenant-aware when a bearer token is present (optional auth).
+    Route::get('i18n/manifest', [\App\Http\Controllers\Api\I18nController::class, 'manifest']);
+    Route::get('i18n/{locale}', [\App\Http\Controllers\Api\I18nController::class, 'strings'])
+        ->where('locale', '[a-zA-Z\-]{2,8}');
+
     // Tenant self-registration — rate-limited to prevent abuse
     Route::post('register', [RegistrationController::class, 'register'])->middleware('throttle:5,1');
 

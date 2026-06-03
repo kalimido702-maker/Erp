@@ -1,0 +1,58 @@
+{
+  "language": {
+    "name": "English",
+    "switch": "العربية"
+  },
+  "brand": {
+    "name": "Shamel ERP",
+    "tagline": "Enterprise Resource Management",
+    "headline": "Run your business\nfrom one place",
+    "subtitle": "An all-in-one ERP platform uniting sales, inventory, accounting\nand HR in a single seamless interface.",
+    "feature_inventory_title": "Inventory & branches",
+    "feature_inventory_desc": "Track stock in real time across every branch",
+    "feature_sales_title": "Sales & invoices",
+    "feature_sales_desc": "Issue professional invoices and manage payments easily",
+    "feature_reports_title": "Reports & analytics",
+    "feature_reports_desc": "Interactive dashboards to support business decisions",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "support": "Support"
+  },
+  "auth": {
+    "welcome_back": "Welcome back",
+    "login": "Sign in",
+    "login_short": "Sign in",
+    "subtitle": "Enter your credentials to access your system",
+    "subtitle_account": "Enter your credentials to access your account",
+    "email": "Email",
+    "email_hint": "example@company.com",
+    "password": "Password",
+    "remember_me": "Remember me",
+    "forgot_password": "Forgot password?",
+    "biometric": "Sign in with fingerprint",
+    "no_account": "Don't have an account? ",
+    "signup_free": "Sign up free",
+    "contact_admin": "Contact your administrator",
+    "email_required": "Email is required",
+    "email_invalid": "Invalid email address",
+    "password_required": "Password is required",
+    "password_short": "Password is too short"
+  },
+  "common": {
+    "or": "or",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search",
+    "view_all": "View all"
+  },
+  "modules": {
+    "inventory": "Inventory & products",
+    "sales": "Sales & invoices",
+    "purchases": "Purchases",
+    "hr": "Human resources",
+    "finance": "Reports",
+    "accounting": "Accounting",
+    "settings": "Settings",
+    "dashboard": "Dashboard"
+  }
+}
