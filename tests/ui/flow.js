@@ -58,10 +58,27 @@ async function shot(page, id) {
   await page.screenshot({ path: path.join(OUT_DIR, `${id}.png`), fullPage: true });
 }
 
-// Wait for Flutter to finish rendering (networkidle + settle time)
+// Wait for Flutter to finish rendering.
+// Strategy:
+//   1. networkidle — all JS/assets fetched
+//   2. waitForFunction — Flutter injects flt-glass-pane once the engine boots;
+//      we poll until it exists OR body has real content (safety net)
+//   3. Fixed settle delay so animations finish
 async function waitFlutter(page, extra = 0) {
   try { await page.waitForLoadState('networkidle', { timeout: 20000 }); } catch (_) {}
-  await page.waitForTimeout(3000 + extra);
+  try {
+    await page.waitForFunction(
+      () => {
+        if (document.querySelector('flt-glass-pane')) return true;
+        if (document.querySelector('flutter-view'))   return true;
+        // CanvasKit mounts a <canvas> directly under body
+        const canvases = document.querySelectorAll('body > canvas');
+        return canvases.length > 0;
+      },
+      { timeout: 12000, polling: 200 },
+    );
+  } catch (_) {}
+  await page.waitForTimeout(2500 + extra);
 }
 
 // Best-effort coordinate click — never throws
@@ -249,7 +266,23 @@ async function main() {
 
   const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      // SwiftShader: software WebGL so Flutter CanvasKit can composite
+      // frames in a headless / GPU-less CI environment.
+      '--use-gl=swiftshader',
+      '--enable-webgl',
+      '--ignore-gpu-blocklist',
+      '--disable-gpu-sandbox',
+      // Prevent background throttling that can stall Flutter's rAF loop.
+      '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding',
+      '--disable-backgrounding-occluded-windows',
+      // Deterministic color output.
+      '--force-color-profile=srgb',
+    ],
   });
 
   try {

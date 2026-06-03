@@ -174,6 +174,16 @@ jobs:
         working-directory: tests/ui
         run: npx playwright install chromium --with-deps
 
+      # Xvfb provides a virtual framebuffer so Flutter's canvas pipeline can
+      # composite frames correctly — without it headless Chrome produces blank
+      # white screenshots even though the DOM loaded.
+      - name: Start Xvfb virtual display
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1440x900x24 -ac &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+          sleep 1
+
       - name: Run browser flow (screenshots)
         working-directory: tests/ui
         env:
@@ -181,6 +191,7 @@ jobs:
           API_URL:    http://localhost:8000
           DEMO_EMAIL: ${{ github.event.inputs.demo_email || 'demo-admin@erp.local' }}
           DEMO_PASS:  ${{ github.event.inputs.demo_pass  || 'Demo@1234' }}
+          DISPLAY:    ':99'
         run: node flow.js
         continue-on-error: true   # Don't fail the job if some steps fail — report still runs
 
