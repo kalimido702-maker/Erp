@@ -58,27 +58,30 @@ async function shot(page, id) {
   await page.screenshot({ path: path.join(OUT_DIR, `${id}.png`), fullPage: true });
 }
 
+// Inject before navigation: sets __flutterFirstFrame when Flutter fires
+// the built-in 'flutter-first-frame' CustomEvent after painting its first frame.
+async function setupFlutterListener(page) {
+  await page.addInitScript(() => {
+    window.__flutterFirstFrame = false;
+    window.addEventListener('flutter-first-frame', () => {
+      window.__flutterFirstFrame = true;
+    }, { once: true });
+  });
+}
+
 // Wait for Flutter to finish rendering.
-// Strategy:
 //   1. networkidle — all JS/assets fetched
-//   2. waitForFunction — Flutter injects flt-glass-pane once the engine boots;
-//      we poll until it exists OR body has real content (safety net)
-//   3. Fixed settle delay so animations finish
+//   2. flutter-first-frame event — fired by Flutter after the first real paint
+//      (much more reliable than polling DOM elements)
+//   3. Settle delay so any entrance animations finish
 async function waitFlutter(page, extra = 0) {
   try { await page.waitForLoadState('networkidle', { timeout: 20000 }); } catch (_) {}
-  try {
-    await page.waitForFunction(
-      () => {
-        if (document.querySelector('flt-glass-pane')) return true;
-        if (document.querySelector('flutter-view'))   return true;
-        // CanvasKit mounts a <canvas> directly under body
-        const canvases = document.querySelectorAll('body > canvas');
-        return canvases.length > 0;
-      },
-      { timeout: 12000, polling: 200 },
-    );
-  } catch (_) {}
-  await page.waitForTimeout(2500 + extra);
+  const gotFrame = await page.waitForFunction(
+    () => window.__flutterFirstFrame === true,
+    { timeout: 12000, polling: 150 },
+  ).then(() => true).catch(() => false);
+  // Confirmed first paint → short settle; no event (SPA nav) → longer fallback.
+  await page.waitForTimeout(gotFrame ? 1200 + extra : 3000 + extra);
 }
 
 // Best-effort coordinate click — never throws
@@ -145,6 +148,7 @@ async function runDesktop(browser) {
     deviceScaleFactor: 1,
   });
   const page = await ctx.newPage();
+  await setupFlutterListener(page);
   let loggedIn = false;
 
   // ── 01: Login · light mode ────────────────────────────────────────────────
@@ -232,6 +236,7 @@ async function runMobile(browser) {
     deviceScaleFactor: 2,
   });
   const page = await ctx.newPage();
+  await setupFlutterListener(page);
 
   // ── 12: Mobile login page ─────────────────────────────────────────────────
   await runStep('12-mobile-login', 'صفحة الدخول · عرض الجوال', async () => {
@@ -265,22 +270,17 @@ async function main() {
   await checkBackend();
 
   const browser = await chromium.launch({
-    headless: true,
+    // headless:false + Xvfb (DISPLAY=:99 exported in CI) is the only reliable
+    // way to get non-blank screenshots from Flutter web, which composites its
+    // canvas layers via the GPU pipeline.  Headless Chrome ignores DISPLAY and
+    // therefore never composites GPU layers → all-white screenshots.
+    headless: false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      // SwiftShader: software WebGL so Flutter CanvasKit can composite
-      // frames in a headless / GPU-less CI environment.
-      '--use-gl=swiftshader',
-      '--enable-webgl',
-      '--ignore-gpu-blocklist',
-      '--disable-gpu-sandbox',
-      // Prevent background throttling that can stall Flutter's rAF loop.
       '--disable-background-timer-throttling',
       '--disable-renderer-backgrounding',
-      '--disable-backgrounding-occluded-windows',
-      // Deterministic color output.
       '--force-color-profile=srgb',
     ],
   });
