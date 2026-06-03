@@ -132,18 +132,20 @@ async function checkBackend() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Desktop layout constants (1440 × 900)
 //
-// Split layout: brand panel (x 0–720) + form panel (x 720–1440).
-// Form content is centered horizontally → formCenterX ≈ 1080.
-// Vertical positions estimated from login_page.dart widget tree.
+// IMPORTANT: the UI is RTL (Arabic). _WebLayout is Row([BrandPanel, FormPanel]);
+// under RTL the FIRST child renders on the RIGHT, so the brand panel is on the
+// RIGHT and the LOGIN FORM is on the LEFT half. Form flex 95 of 200 → form
+// occupies x≈0–684, centered around x≈342. The theme toggle sits top-LEFT.
+// (Coordinates read off the rendered 1440×900 login screenshot.)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const D = {
-  cx:         1080, // horizontal center of form panel
-  emailY:      375, // email TextField
-  passY:       458, // password TextField
-  btnY:        548, // "دخول" ElevatedButton
-  themeX:     1395, // dark/light toggle chip (top-right of form panel)
-  themeY:       28,
+  cx:          342, // horizontal center of the LEFT form panel (RTL)
+  emailY:      371, // email TextField
+  passY:       463, // password TextField
+  btnY:        568, // "دخول" ElevatedButton
+  themeX:       58, // dark-mode toggle (top-left chip)
+  themeY:       49,
 };
 
 async function runDesktop(browser) {
@@ -229,9 +231,9 @@ async function runDesktop(browser) {
 
 const M = {
   cx:     195, // horizontal center
-  emailY: 490,
-  passY:  575,
-  btnY:   650,
+  emailY: 425, // email field (below ~260px hero + title + label)
+  passY:  520, // password field
+  btnY:   615, // "دخول" button
 };
 
 async function runMobile(browser) {
