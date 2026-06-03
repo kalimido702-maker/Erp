@@ -229,11 +229,13 @@ async function runDesktop(browser) {
 // Hero gradient section ≈ 260 px; scrollable card below.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// New mobile login: full gradient with a white card occupying the bottom ~67%
+// (card top ≈ y280). Fields sit inside the card.
 const M = {
   cx:     195, // horizontal center
-  emailY: 425, // email field (below ~260px hero + title + label)
-  passY:  520, // password field
-  btnY:   615, // "دخول" button
+  emailY: 438, // email field
+  passY:  538, // password field
+  btnY:   645, // "تسجيل الدخول" button
 };
 
 async function runMobile(browser) {

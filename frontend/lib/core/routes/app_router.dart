@@ -100,27 +100,33 @@ class SidebarNav extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // brand
+          // brand — colored شاملX logo (falls back to the icon mark if missing)
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: const Alignment(-0.5, -1),
-                      end: const Alignment(0.5, 1),
-                      colors: AppColors.brandGradientColors,
+            child: Image.asset(
+              'assets/images/shamel_logo.png',
+              height: 38,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerRight,
+              errorBuilder: (_, __, ___) => Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: const Alignment(-0.5, -1),
+                        end: const Alignment(0.5, 1),
+                        colors: AppColors.brandGradientColors,
+                      ),
+                      borderRadius: BorderRadius.circular(9),
                     ),
-                    borderRadius: BorderRadius.circular(9),
+                    child: const Icon(Icons.business_rounded, color: Colors.white, size: 18),
                   ),
-                  child: const Icon(Icons.business_rounded, color: Colors.white, size: 18),
-                ),
-                const SizedBox(width: 11),
-                Text('شامل ERP', style: GoogleFonts.tajawal(fontSize: 17, fontWeight: FontWeight.w800)),
-              ],
+                  const SizedBox(width: 11),
+                  Text('شامل ERP', style: GoogleFonts.tajawal(fontSize: 17, fontWeight: FontWeight.w800)),
+                ],
+              ),
             ),
           ),
           // store selector

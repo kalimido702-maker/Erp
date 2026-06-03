@@ -102,28 +102,36 @@ class _BrandPanel extends StatelessWidget {
 class _BrandLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: Colors.white.withAlpha(36),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withAlpha(60)),
+    // White شاملX logo on the gradient. Falls back to the icon+text mark if the
+    // asset isn't present yet, so the UI never breaks if the file is missing.
+    return Image.asset(
+      'assets/images/shamel_logo_white.png',
+      height: 52,
+      fit: BoxFit.contain,
+      alignment: Alignment.centerRight,
+      errorBuilder: (_, __, ___) => Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(36),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withAlpha(60)),
+            ),
+            child: const Icon(Icons.business_rounded, color: Colors.white, size: 24),
           ),
-          child: const Icon(Icons.business_rounded, color: Colors.white, size: 24),
-        ),
-        const SizedBox(width: 14),
-        Text(
-          'شامل ERP',
-          style: GoogleFonts.tajawal(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
+          const SizedBox(width: 14),
+          Text(
+            'شامل ERP',
+            style: GoogleFonts.tajawal(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -347,58 +355,55 @@ class _MobileLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // gradient hero
-        Container(
-          height: 260,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment(-0.5, -1.0),
-              end: Alignment(0.5, 1.0),
-              colors: AppColors.brandGradientColors,
-              stops: [0.0, 0.48, 0.78, 1.0],
-            ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? AppColors.surfaceDark : Colors.white;
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment(-0.4, -1.0),
+          end: Alignment(0.4, 1.0),
+          colors: AppColors.brandGradientColors,
+          stops: [0.0, 0.48, 0.78, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // subtle grid texture over the gradient
+          Positioned.fill(
+            child: Opacity(opacity: 0.10, child: CustomPaint(painter: _GridPainter())),
           ),
-          padding: const EdgeInsets.fromLTRB(28, 56, 28, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(36),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withAlpha(60)),
+          // floating white form card anchored to the bottom
+          SafeArea(
+            child: Column(
+              children: [
+                const Spacer(flex: 33),
+                Expanded(
+                  flex: 67,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(28),
+                          blurRadius: 30,
+                          offset: const Offset(0, -8),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(26, 34, 26, 26),
+                      child: const _LoginForm(mobile: true),
+                    ),
+                  ),
                 ),
-                child: const Icon(Icons.business_rounded, color: Colors.white, size: 22),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'شامل ERP',
-                style: GoogleFonts.tajawal(fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white),
-              ),
-              Text(
-                'نظام إدارة الموارد المؤسسية',
-                style: GoogleFonts.tajawal(fontSize: 14, color: Colors.white.withAlpha(200)),
-              ),
-            ],
-          ),
-        ),
-        // form card
-        Expanded(
-          child: Container(
-            color: AppColors.bg,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: const _LoginForm(compact: true),
+              ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -408,8 +413,8 @@ class _MobileLayout extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _LoginForm extends ConsumerStatefulWidget {
-  final bool compact;
-  const _LoginForm({this.compact = false});
+  final bool mobile;
+  const _LoginForm({this.mobile = false});
 
   @override
   ConsumerState<_LoginForm> createState() => _LoginFormState();
@@ -459,15 +464,15 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (!widget.compact) ...[
+          if (!widget.mobile) ...[
             Text('مرحبًا بعودتك', style: GoogleFonts.tajawal(fontSize: 29, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: cs.onSurface)),
             const SizedBox(height: 8),
             Text('أدخل بياناتك للوصول إلى نظامك', style: GoogleFonts.tajawal(fontSize: 15, color: cs.onSurface.withAlpha(160))),
             const SizedBox(height: 30),
           ] else ...[
-            Text('تسجيل الدخول', style: GoogleFonts.tajawal(fontSize: 24, fontWeight: FontWeight.w800, color: cs.onSurface)),
+            Text('تسجيل الدخول', style: GoogleFonts.tajawal(fontSize: 26, fontWeight: FontWeight.w800, color: cs.onSurface)),
             const SizedBox(height: 8),
-            Text('أدخل بياناتك للوصول إلى نظامك', style: GoogleFonts.tajawal(fontSize: 14, color: cs.onSurface.withAlpha(160))),
+            Text('أدخل بياناتك للوصول إلى حسابك', style: GoogleFonts.tajawal(fontSize: 14, color: cs.onSurface.withAlpha(160))),
             const SizedBox(height: 24),
           ],
           // email field
@@ -534,47 +539,91 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             onPressed: authState.isLoading ? null : _submit,
             child: authState.isLoading
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : Text('دخول', style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 16)),
-          ),
-          // OR divider
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Row(
-              children: [
-                Expanded(child: Divider(color: cs.outline, thickness: 1)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Text('أو', style: GoogleFonts.tajawal(fontSize: 13, color: cs.onSurface.withAlpha(100))),
-                ),
-                Expanded(child: Divider(color: cs.outline, thickness: 1)),
-              ],
-            ),
-          ),
-          // SSO buttons
-          Row(
-            children: [
-              Expanded(child: _SsoButton(icon: '🇬', label: 'Google')),
-              const SizedBox(width: 12),
-              Expanded(child: _SsoButton(icon: '🪟', label: 'Microsoft')),
-            ],
-          ),
-          const SizedBox(height: 30),
-          Center(
-            child: Text.rich(
-              TextSpan(
-                text: 'ليس لديك حساب؟ ',
-                style: GoogleFonts.tajawal(fontSize: 14, color: cs.onSurface.withAlpha(160)),
-                children: [
-                  WidgetSpan(
-                    child: GestureDetector(
-                      onTap: () {},
-                      child: Text(
-                        'سجّل مجانًا',
-                        style: GoogleFonts.tajawal(fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary),
-                      ),
-                    ),
+                : Text(
+                    widget.mobile ? 'تسجيل الدخول' : 'دخول',
+                    style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 16),
                   ),
-                ],
+          ),
+          if (widget.mobile) ...[
+            const SizedBox(height: 18),
+            _BiometricButton(),
+            const SizedBox(height: 26),
+            Center(
+              child: _SignupHint(
+                lead: 'ليس لديك حساب؟ ',
+                action: 'تواصل مع مدير النظام',
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 30),
+            Center(
+              child: _SignupHint(
+                lead: 'ليس لديك حساب؟ ',
+                action: 'سجّل مجانًا',
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BiometricButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return OutlinedButton(
+      onPressed: () {},
+      style: OutlinedButton.styleFrom(
+        backgroundColor: cs.surface,
+        foregroundColor: cs.onSurface,
+        side: BorderSide(color: cs.outlineVariant),
+        padding: const EdgeInsets.symmetric(vertical: 11),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'الدخول ببصمة الإصبع',
+            style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 14.5),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: cs.primary.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.fingerprint_rounded, color: cs.primary, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignupHint extends StatelessWidget {
+  final String lead;
+  final String action;
+  const _SignupHint({required this.lead, required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text.rich(
+      TextSpan(
+        text: lead,
+        style: GoogleFonts.tajawal(fontSize: 14, color: cs.onSurface.withAlpha(160)),
+        children: [
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: GestureDetector(
+              onTap: () {},
+              child: Text(
+                action,
+                style: GoogleFonts.tajawal(fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary),
               ),
             ),
           ),
@@ -619,34 +668,6 @@ class _RememberMe extends StatelessWidget {
           ),
           const SizedBox(width: 9),
           Text('تذكّرني', style: GoogleFonts.tajawal(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withAlpha(160))),
-        ],
-      ),
-    );
-  }
-}
-
-class _SsoButton extends StatelessWidget {
-  final String icon;
-  final String label;
-  const _SsoButton({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return OutlinedButton(
-      onPressed: () {},
-      style: OutlinedButton.styleFrom(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.onSurface,
-        side: BorderSide(color: cs.outlineVariant),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 9),
-          Text(label, style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 14)),
         ],
       ),
     );
