@@ -18,7 +18,6 @@ frontend/macos/
 frontend/windows/
 frontend/linux/
 frontend/android/
-frontend/web/
 frontend/.idea/
 frontend/*.iml
 
