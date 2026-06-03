@@ -60,12 +60,18 @@ async function shot(page, id) {
 
 // Inject before navigation: sets __flutterFirstFrame when Flutter fires
 // the built-in 'flutter-first-frame' CustomEvent after painting its first frame.
+// Also surfaces browser console errors + uncaught JS exceptions to the CI log
+// so a blank-screen root cause (e.g. an exception before runApp) is visible.
 async function setupFlutterListener(page) {
   await page.addInitScript(() => {
     window.__flutterFirstFrame = false;
     window.addEventListener('flutter-first-frame', () => {
       window.__flutterFirstFrame = true;
     }, { once: true });
+  });
+  page.on('pageerror', err => log('🛑', `[page error] ${err.message}`));
+  page.on('console', msg => {
+    if (msg.type() === 'error') log('🟠', `[console] ${msg.text().slice(0, 200)}`);
   });
 }
 

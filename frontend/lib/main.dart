@@ -15,15 +15,27 @@ void main() async {
   await EasyLocalization.ensureInitialized();
   await configureDependencies();
 
-  // Fix #4: Initialize AES encryptor before opening DB.
-  // Key is generated on first run and stored in Android Keystore / iOS Keychain.
-  await FieldEncryptor.instance.init();
+  // Offline storage bootstrap is BEST-EFFORT. A failure here must never
+  // prevent the app from booting (which would show a blank white screen).
+  // - Mobile/desktop: full offline support (encryptor + SQLite).
+  // - Web: sqflite has no web backend, so we skip the local DB and degrade
+  //   to online-only instead of crashing before runApp().
+  try {
+    // Fix #4: Initialize AES encryptor before opening DB.
+    // Key is generated on first run and stored in Keystore/Keychain (web: JS crypto).
+    await FieldEncryptor.instance.init();
 
-  // Open local SQLite database (schema creation/migration runs here)
-  await LocalDatabase.instance.db;
+    if (!kIsWeb) {
+      // Open local SQLite database (schema creation/migration runs here)
+      await LocalDatabase.instance.db;
 
-  // Fix #8: Clean expired normalized_entities on startup (bounded DB size)
-  await LocalDatabase.instance.cleanExpiredNormalized();
+      // Fix #8: Clean expired normalized_entities on startup (bounded DB size)
+      await LocalDatabase.instance.cleanExpiredNormalized();
+    }
+  } catch (e, st) {
+    // Never block boot on storage init — log and continue online-only.
+    debugPrint('Offline storage init failed (continuing online-only): $e\n$st');
+  }
 
   runApp(
     EasyLocalization(
