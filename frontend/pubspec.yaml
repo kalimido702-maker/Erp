@@ -70,9 +70,12 @@ dependencies:
   path_provider: ^2.1.3
   rxdart: ^0.28.0
 
-  # Encryption (SQLite field-level)
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Encryption
   encrypt: ^5.0.3
-  pointycastle: ^3.9.1
+  pointycastle: ^3.7.4
 
 dev_dependencies:
   flutter_test:
