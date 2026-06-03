@@ -1,0 +1,17 @@
+{
+  "name": "erp-ui-e2e",
+  "version": "1.0.0",
+  "description": "Automated browser flow + screenshot report for شامل ERP",
+  "private": true,
+  "scripts": {
+    "flow":   "node flow.js",
+    "upload": "node gofile.js",
+    "report": "node report.js",
+    "all":    "node flow.js && node gofile.js && node report.js"
+  },
+  "dependencies": {
+    "playwright": "1.47.0",
+    "axios": "^1.7.9",
+    "form-data": "^4.0.0"
+  }
+}

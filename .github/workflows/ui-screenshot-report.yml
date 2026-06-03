@@ -1,0 +1,228 @@
+name: 📸 UI Screenshot Report
+
+# Run manually or on pushes to main branches.
+# Intentionally NOT on every PR push — this job takes ~12 minutes.
+on:
+  workflow_dispatch:
+    inputs:
+      demo_email:
+        description: 'Demo login email'
+        default: 'demo-admin@erp.local'
+        required: false
+      demo_pass:
+        description: 'Demo password'
+        default: 'Demo@1234'
+        required: false
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'tests/ui/**'
+      - '.github/workflows/ui-screenshot-report.yml'
+
+jobs:
+  screenshot:
+    name: Browser Flow + Screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: erp_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      # ─────────────────────────────────────────────────
+      # 1. Checkout
+      # ─────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ─────────────────────────────────────────────────
+      # 2. Setup PHP + Backend
+      # ─────────────────────────────────────────────────
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring,pdo,pdo_mysql,bcmath,gd,intl,dom,xml,fileinfo
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: php-83-composer-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: php-83-composer-
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Configure backend .env
+        working-directory: backend
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          cat >> .env <<'EOF'
+          APP_ENV=testing
+          APP_DEBUG=true
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=erp_test
+          DB_USERNAME=root
+          DB_PASSWORD=root
+          QUEUE_CONNECTION=sync
+          CACHE_STORE=array
+          SESSION_DRIVER=array
+          REVERB_HOST=localhost
+          REVERB_PORT=8080
+          EOF
+
+      - name: Migrate and seed demo data
+        working-directory: backend
+        run: |
+          php artisan migrate --force
+          php artisan db:seed --force
+          php artisan db:seed --class=DemoSeeder --force
+
+      - name: Start Laravel server
+        working-directory: backend
+        run: php artisan serve --port=8000 --host=0.0.0.0 &
+        # Give it a moment to boot
+      - run: sleep 3
+
+      - name: Verify backend health
+        run: |
+          curl -sf http://localhost:8000/api/v1/health | python3 -m json.tool || true
+
+      # ─────────────────────────────────────────────────
+      # 3. Build Flutter Web
+      # ─────────────────────────────────────────────────
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: stable
+
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            frontend/.dart_tool
+            ${{ env.PUB_CACHE }}
+          key: flutter-pub-${{ hashFiles('frontend/pubspec.lock') }}
+          restore-keys: flutter-pub-
+
+      - name: Flutter pub get
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Generate code (build_runner)
+        working-directory: frontend
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Flutter web
+        working-directory: frontend
+        run: |
+          flutter build web \
+            --web-renderer html \
+            --dart-define=API_BASE_URL=http://localhost:8000/api/v1 \
+            --release
+        # HTML renderer makes the DOM accessible to Playwright for form interactions
+
+      # ─────────────────────────────────────────────────
+      # 4. Serve Flutter web
+      # ─────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install serve
+        run: npm install -g serve
+
+      - name: Start Flutter web server
+        run: serve frontend/build/web --single --listen 8080 &
+
+      - name: Wait for Flutter web to be ready
+        run: |
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8080/ > /dev/null && echo "Flutter web ready" && break
+            echo "Waiting... ($i/20)"
+            sleep 2
+          done
+
+      # ─────────────────────────────────────────────────
+      # 5. Install Playwright + Run flow
+      # ─────────────────────────────────────────────────
+      - name: Install Playwright dependencies
+        working-directory: tests/ui
+        run: npm install
+
+      - name: Install Chromium browser
+        working-directory: tests/ui
+        run: npx playwright install chromium --with-deps
+
+      - name: Run browser flow (screenshots)
+        working-directory: tests/ui
+        env:
+          APP_URL:    http://localhost:8080
+          API_URL:    http://localhost:8000
+          DEMO_EMAIL: ${{ github.event.inputs.demo_email || 'demo-admin@erp.local' }}
+          DEMO_PASS:  ${{ github.event.inputs.demo_pass  || 'Demo@1234' }}
+        run: node flow.js
+        continue-on-error: true   # Don't fail the job if some steps fail — report still runs
+
+      # ─────────────────────────────────────────────────
+      # 6. Upload screenshots to gofile.io
+      # ─────────────────────────────────────────────────
+      - name: Upload screenshots to gofile.io
+        working-directory: tests/ui
+        run: node gofile.js
+        continue-on-error: true   # Gofile can be unreachable — we still have artifacts
+
+      # ─────────────────────────────────────────────────
+      # 7. Generate report
+      # ─────────────────────────────────────────────────
+      - name: Generate report + write Actions summary
+        working-directory: tests/ui
+        run: node report.js
+
+      # ─────────────────────────────────────────────────
+      # 8. Upload artifacts (always, even on failure)
+      # ─────────────────────────────────────────────────
+      - name: Upload screenshots artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-screenshots-${{ github.sha }}
+          path: |
+            tests/ui/screenshots/*.png
+            tests/ui/screenshots/results.json
+            tests/ui/screenshots/report.html
+          retention-days: 30
+          if-no-files-found: warn
+
+      # ─────────────────────────────────────────────────
+      # 9. Fail job if too many steps failed
+      # ─────────────────────────────────────────────────
+      - name: Check pass rate
+        working-directory: tests/ui
+        run: |
+          node -e "
+            const r = require('./screenshots/results.json');
+            const rate = r.passed / r.total;
+            console.log('Pass rate:', (rate * 100).toFixed(0) + '%');
+            if (rate < 0.5) { console.error('Pass rate below 50% — failing job'); process.exit(1); }
+          "
