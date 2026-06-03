@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../../shared/widgets/brand_logo.dart';
 import '../theme/app_colors.dart';
 import '../utils/auth_guard.dart';
 import 'app_routes.dart';
@@ -100,33 +101,12 @@ class SidebarNav extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // brand — colored شاملX logo (falls back to the icon mark if missing)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
-            child: Image.asset(
-              'assets/images/shamel_logo.png',
-              height: 38,
-              fit: BoxFit.contain,
-              alignment: Alignment.centerRight,
-              errorBuilder: (_, __, ___) => Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: const Alignment(-0.5, -1),
-                        end: const Alignment(0.5, 1),
-                        colors: AppColors.brandGradientColors,
-                      ),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: const Icon(Icons.business_rounded, color: Colors.white, size: 18),
-                  ),
-                  const SizedBox(width: 11),
-                  Text('شامل ERP', style: GoogleFonts.tajawal(fontSize: 17, fontWeight: FontWeight.w800)),
-                ],
-              ),
+          // brand — شاملX logo (auto tone, graceful fallback if asset missing)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 20, 24, 18),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: BrandLogo.auto(height: 38),
             ),
           ),
           // store selector

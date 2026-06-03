@@ -2,23 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/i18n/i18n.dart';
+import '../../../../core/responsive/responsive.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/widgets/brand_logo.dart';
 import '../providers/auth_provider.dart';
 
-class LoginPage extends ConsumerWidget {
+class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+  Widget build(BuildContext context) {
+    return const Scaffold(
       backgroundColor: AppColors.bg,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth >= 900) {
-            return const _WebLayout();
-          }
-          return const _MobileLayout();
-        },
+      body: ResponsiveLayout(
+        mobile: _MobileLayout(),
+        desktop: _WebLayout(),
       ),
     );
   }
@@ -58,7 +57,6 @@ class _BrandPanel extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // mesh overlay
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -70,26 +68,21 @@ class _BrandPanel extends StatelessWidget {
               ),
             ),
           ),
-          // grid pattern
           Positioned.fill(
-            child: Opacity(
-              opacity: 0.13,
-              child: CustomPaint(painter: _GridPainter()),
-            ),
+            child: Opacity(opacity: 0.13, child: CustomPaint(painter: _GridPainter())),
           ),
-          // content
           Padding(
             padding: const EdgeInsets.fromLTRB(56, 56, 56, 48),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _BrandLogo(),
+                const Align(alignment: AlignmentDirectional.centerStart, child: BrandLogo.white(height: 52)),
                 const Spacer(),
-                _BrandHeadline(),
+                const _BrandHeadline(),
                 const SizedBox(height: 36),
-                _FeatureList(),
+                const _FeatureList(),
                 const SizedBox(height: 42),
-                _BrandFooter(),
+                const _BrandFooter(),
               ],
             ),
           ),
@@ -99,51 +92,16 @@ class _BrandPanel extends StatelessWidget {
   }
 }
 
-class _BrandLogo extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // White شاملX logo on the gradient. Falls back to the icon+text mark if the
-    // asset isn't present yet, so the UI never breaks if the file is missing.
-    return Image.asset(
-      'assets/images/shamel_logo_white.png',
-      height: 52,
-      fit: BoxFit.contain,
-      alignment: Alignment.centerRight,
-      errorBuilder: (_, __, ___) => Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(36),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withAlpha(60)),
-            ),
-            child: const Icon(Icons.business_rounded, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            'شامل ERP',
-            style: GoogleFonts.tajawal(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BrandHeadline extends StatelessWidget {
+  const _BrandHeadline();
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'أدِر عملك\nمن مكانٍ واحد',
+          context.tr('brand.headline'),
           style: GoogleFonts.tajawal(
             fontSize: 42,
             fontWeight: FontWeight.w800,
@@ -154,12 +112,8 @@ class _BrandHeadline extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         Text(
-          'منصة ERP متكاملة تجمع المبيعات والمخزون والمحاسبة\nوالموارد البشرية في واجهة واحدة سلسة.',
-          style: GoogleFonts.tajawal(
-            fontSize: 17,
-            height: 1.7,
-            color: Colors.white.withAlpha(209),
-          ),
+          context.tr('brand.subtitle'),
+          style: GoogleFonts.tajawal(fontSize: 17, height: 1.7, color: Colors.white.withAlpha(209)),
         ),
       ],
     );
@@ -167,16 +121,17 @@ class _BrandHeadline extends StatelessWidget {
 }
 
 class _FeatureList extends StatelessWidget {
-  static const _feats = [
-    (Icons.inventory_2_outlined, 'مخزون وفروع', 'تتبع المخزون في الوقت الفعلي عبر جميع الفروع'),
-    (Icons.receipt_long_outlined, 'مبيعات وفواتير', 'إصدار فواتير احترافية وإدارة المدفوعات بسهولة'),
-    (Icons.bar_chart_rounded, 'تقارير وتحليلات', 'لوحات بيانات تفاعلية لدعم قرارات الأعمال'),
-  ];
+  const _FeatureList();
 
   @override
   Widget build(BuildContext context) {
+    final feats = <(IconData, String, String)>[
+      (Icons.inventory_2_outlined, 'brand.feature_inventory_title', 'brand.feature_inventory_desc'),
+      (Icons.receipt_long_outlined, 'brand.feature_sales_title', 'brand.feature_sales_desc'),
+      (Icons.bar_chart_rounded, 'brand.feature_reports_title', 'brand.feature_reports_desc'),
+    ];
     return Column(
-      children: _feats
+      children: feats
           .map(
             (f) => Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -196,8 +151,8 @@ class _FeatureList extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(f.$2, style: GoogleFonts.tajawal(fontSize: 15.5, fontWeight: FontWeight.w700, color: Colors.white)),
-                      Text(f.$3, style: GoogleFonts.tajawal(fontSize: 13.5, color: Colors.white.withAlpha(184))),
+                      Text(context.tr(f.$2), style: GoogleFonts.tajawal(fontSize: 15.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                      Text(context.tr(f.$3), style: GoogleFonts.tajawal(fontSize: 13.5, color: Colors.white.withAlpha(184))),
                     ],
                   ),
                 ],
@@ -210,37 +165,32 @@ class _FeatureList extends StatelessWidget {
 }
 
 class _BrandFooter extends StatelessWidget {
+  const _BrandFooter();
+
   @override
   Widget build(BuildContext context) {
+    Widget link(String key) => Text(
+          context.tr(key),
+          style: GoogleFonts.tajawal(fontSize: 13, color: Colors.white.withAlpha(153)),
+        );
     return Row(
       children: [
-        _footerLink('سياسة الخصوصية'),
+        link('brand.privacy'),
         const SizedBox(width: 26),
-        _footerLink('شروط الاستخدام'),
+        link('brand.terms'),
         const SizedBox(width: 26),
-        _footerLink('الدعم الفني'),
+        link('brand.support'),
       ],
     );
   }
-
-  Widget _footerLink(String label) => Text(
-        label,
-        style: GoogleFonts.tajawal(fontSize: 13, color: Colors.white.withAlpha(153)),
-      );
 }
 
-class _FormPanel extends ConsumerStatefulWidget {
+class _FormPanel extends StatelessWidget {
   const _FormPanel();
 
   @override
-  ConsumerState<_FormPanel> createState() => _FormPanelState();
-}
-
-class _FormPanelState extends ConsumerState<_FormPanel> {
-  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       color: isDark ? AppColors.bgDark : AppColors.bg,
       child: Column(
@@ -274,7 +224,7 @@ class _TopBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _LangChip(),
+          const _LangChip(),
           _ThemeToggleChip(isDark: isDark),
         ],
       ),
@@ -282,35 +232,43 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _LangChip extends StatelessWidget {
+/// Language switcher — actually toggles the app locale (and RTL/LTR) via i18n.
+class _LangChip extends ConsumerWidget {
+  const _LangChip();
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        border: Border.all(color: cs.outlineVariant),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('🌐', style: TextStyle(fontSize: 14)),
-          const SizedBox(width: 7),
-          Text('العربية', style: GoogleFonts.tajawal(fontSize: 13.5, fontWeight: FontWeight.w700, color: cs.onSurface.withAlpha(180))),
-        ],
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: () => ref.read(i18nControllerProvider.notifier).toggle(),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          border: Border.all(color: cs.outlineVariant),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🌐', style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 7),
+            Text(context.tr('language.name'),
+                style: GoogleFonts.tajawal(fontSize: 13.5, fontWeight: FontWeight.w700, color: cs.onSurface.withAlpha(180))),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ThemeToggleChip extends ConsumerWidget {
+class _ThemeToggleChip extends StatelessWidget {
   final bool isDark;
   const _ThemeToggleChip({required this.isDark});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
@@ -347,7 +305,7 @@ class _ThemeToggleChip extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mobile layout
+// Mobile: full gradient + floating white card
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MobileLayout extends StatelessWidget {
@@ -369,11 +327,9 @@ class _MobileLayout extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // subtle grid texture over the gradient
           Positioned.fill(
             child: Opacity(opacity: 0.10, child: CustomPaint(painter: _GridPainter())),
           ),
-          // floating white form card anchored to the bottom
           SafeArea(
             child: Column(
               children: [
@@ -385,13 +341,7 @@ class _MobileLayout extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: cardColor,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(28),
-                          blurRadius: 30,
-                          offset: const Offset(0, -8),
-                        ),
-                      ],
+                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(28), blurRadius: 30, offset: const Offset(0, -8))],
                     ),
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(26, 34, 26, 26),
@@ -465,18 +415,17 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!widget.mobile) ...[
-            Text('مرحبًا بعودتك', style: GoogleFonts.tajawal(fontSize: 29, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: cs.onSurface)),
+            Text(context.tr('auth.welcome_back'), style: GoogleFonts.tajawal(fontSize: 29, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: cs.onSurface)),
             const SizedBox(height: 8),
-            Text('أدخل بياناتك للوصول إلى نظامك', style: GoogleFonts.tajawal(fontSize: 15, color: cs.onSurface.withAlpha(160))),
+            Text(context.tr('auth.subtitle'), style: GoogleFonts.tajawal(fontSize: 15, color: cs.onSurface.withAlpha(160))),
             const SizedBox(height: 30),
           ] else ...[
-            Text('تسجيل الدخول', style: GoogleFonts.tajawal(fontSize: 26, fontWeight: FontWeight.w800, color: cs.onSurface)),
+            Text(context.tr('auth.login'), style: GoogleFonts.tajawal(fontSize: 26, fontWeight: FontWeight.w800, color: cs.onSurface)),
             const SizedBox(height: 8),
-            Text('أدخل بياناتك للوصول إلى حسابك', style: GoogleFonts.tajawal(fontSize: 14, color: cs.onSurface.withAlpha(160))),
+            Text(context.tr('auth.subtitle_account'), style: GoogleFonts.tajawal(fontSize: 14, color: cs.onSurface.withAlpha(160))),
             const SizedBox(height: 24),
           ],
-          // email field
-          _FieldLabel(label: 'البريد الإلكتروني'),
+          _FieldLabel(label: context.tr('auth.email')),
           const SizedBox(height: 8),
           TextFormField(
             controller: _emailCtrl,
@@ -484,19 +433,18 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
             textDirection: TextDirection.ltr,
             textAlign: TextAlign.start,
             decoration: InputDecoration(
-              hintText: 'example@company.com',
+              hintText: context.tr('auth.email_hint'),
               prefixIcon: const Icon(Icons.email_outlined, size: 20),
               contentPadding: const EdgeInsets.symmetric(horizontal: 44, vertical: 14),
             ),
             validator: (v) {
-              if (v == null || v.isEmpty) return 'البريد الإلكتروني مطلوب';
-              if (!v.contains('@')) return 'البريد الإلكتروني غير صحيح';
+              if (v == null || v.isEmpty) return context.tr('auth.email_required');
+              if (!v.contains('@')) return context.tr('auth.email_invalid');
               return null;
             },
           ),
           const SizedBox(height: 18),
-          // password field
-          _FieldLabel(label: 'كلمة المرور'),
+          _FieldLabel(label: context.tr('auth.password')),
           const SizedBox(height: 8),
           TextFormField(
             controller: _passCtrl,
@@ -511,12 +459,11 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 44, vertical: 14),
             ),
             validator: (v) {
-              if (v == null || v.isEmpty) return 'كلمة المرور مطلوبة';
-              if (v.length < 6) return 'كلمة المرور قصيرة جداً';
+              if (v == null || v.isEmpty) return context.tr('auth.password_required');
+              if (v.length < 6) return context.tr('auth.password_short');
               return null;
             },
           ),
-          // remember + forgot
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
             child: Row(
@@ -525,43 +472,29 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
                 _RememberMe(value: _remember, onChanged: (v) => setState(() => _remember = v ?? false)),
                 TextButton(
                   onPressed: () {},
-                  style: TextButton.styleFrom(
-                    foregroundColor: cs.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                  ),
-                  child: Text('نسيت كلمة المرور؟', style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 14)),
+                  style: TextButton.styleFrom(foregroundColor: cs.primary, padding: const EdgeInsets.symmetric(horizontal: 4)),
+                  child: Text(context.tr('auth.forgot_password'), style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 14)),
                 ),
               ],
             ),
           ),
-          // submit
           ElevatedButton(
             onPressed: authState.isLoading ? null : _submit,
             child: authState.isLoading
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
                 : Text(
-                    widget.mobile ? 'تسجيل الدخول' : 'دخول',
+                    context.tr(widget.mobile ? 'auth.login' : 'auth.login_short'),
                     style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 16),
                   ),
           ),
           if (widget.mobile) ...[
             const SizedBox(height: 18),
-            _BiometricButton(),
+            const _BiometricButton(),
             const SizedBox(height: 26),
-            Center(
-              child: _SignupHint(
-                lead: 'ليس لديك حساب؟ ',
-                action: 'تواصل مع مدير النظام',
-              ),
-            ),
+            Center(child: _SignupHint(lead: context.tr('auth.no_account'), action: context.tr('auth.contact_admin'))),
           ] else ...[
             const SizedBox(height: 30),
-            Center(
-              child: _SignupHint(
-                lead: 'ليس لديك حساب؟ ',
-                action: 'سجّل مجانًا',
-              ),
-            ),
+            Center(child: _SignupHint(lead: context.tr('auth.no_account'), action: context.tr('auth.signup_free'))),
           ],
         ],
       ),
@@ -570,6 +503,8 @@ class _LoginFormState extends ConsumerState<_LoginForm> {
 }
 
 class _BiometricButton extends StatelessWidget {
+  const _BiometricButton();
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -584,18 +519,12 @@ class _BiometricButton extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            'الدخول ببصمة الإصبع',
-            style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 14.5),
-          ),
+          Text(context.tr('auth.biometric'), style: GoogleFonts.tajawal(fontWeight: FontWeight.w700, fontSize: 14.5)),
           const SizedBox(width: 12),
           Container(
             width: 34,
             height: 34,
-            decoration: BoxDecoration(
-              color: cs.primary.withAlpha(20),
-              borderRadius: BorderRadius.circular(10),
-            ),
+            decoration: BoxDecoration(color: cs.primary.withAlpha(20), borderRadius: BorderRadius.circular(10)),
             child: Icon(Icons.fingerprint_rounded, color: cs.primary, size: 20),
           ),
         ],
@@ -621,10 +550,7 @@ class _SignupHint extends StatelessWidget {
             alignment: PlaceholderAlignment.middle,
             child: GestureDetector(
               onTap: () {},
-              child: Text(
-                action,
-                style: GoogleFonts.tajawal(fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary),
-              ),
+              child: Text(action, style: GoogleFonts.tajawal(fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary)),
             ),
           ),
         ],
@@ -667,7 +593,7 @@ class _RememberMe extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 9),
-          Text('تذكّرني', style: GoogleFonts.tajawal(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withAlpha(160))),
+          Text(context.tr('auth.remember_me'), style: GoogleFonts.tajawal(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withAlpha(160))),
         ],
       ),
     );
@@ -675,7 +601,7 @@ class _RememberMe extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Grid painter for brand panel background
+// Grid painter for brand backgrounds
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _GridPainter extends CustomPainter {
@@ -684,7 +610,6 @@ class _GridPainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.white.withAlpha(153)
       ..strokeWidth = 1;
-
     const step = 46.0;
     for (double x = 0; x <= size.width; x += step) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);

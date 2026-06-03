@@ -1,10 +1,12 @@
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/di/injection.dart';
+import 'core/i18n/i18n.dart';
 import 'core/offline/field_encryptor.dart';
 import 'core/offline/local_database.dart';
 import 'core/offline/sync_manager.dart';
@@ -13,38 +15,28 @@ import 'core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await EasyLocalization.ensureInitialized();
   await configureDependencies();
 
-  // Offline storage bootstrap is BEST-EFFORT. A failure here must never
-  // prevent the app from booting (which would show a blank white screen).
-  // - Mobile/desktop: full offline support (encryptor + SQLite).
-  // - Web: sqflite has no web backend, so we skip the local DB and degrade
-  //   to online-only instead of crashing before runApp().
+  // SharedPreferences backs both the saved language and the i18n cache; it is
+  // cross-platform (incl. web) so it's safe to initialize everywhere.
+  final prefs = await SharedPreferences.getInstance();
+
+  // Offline storage bootstrap is BEST-EFFORT — a failure must never block boot.
+  // Mobile/desktop get full offline support; web degrades to online-only.
   try {
-    // Fix #4: Initialize AES encryptor before opening DB.
-    // Key is generated on first run and stored in Keystore/Keychain (web: JS crypto).
     await FieldEncryptor.instance.init();
-
     if (!kIsWeb) {
-      // Open local SQLite database (schema creation/migration runs here)
       await LocalDatabase.instance.db;
-
-      // Fix #8: Clean expired normalized_entities on startup (bounded DB size)
       await LocalDatabase.instance.cleanExpiredNormalized();
     }
   } catch (e, st) {
-    // Never block boot on storage init — log and continue online-only.
     debugPrint('Offline storage init failed (continuing online-only): $e\n$st');
   }
 
   runApp(
-    EasyLocalization(
-      supportedLocales: const [Locale('ar'), Locale('en')],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('ar'),
-      startLocale: const Locale('ar'),
-      child: const ProviderScope(child: ErpApp()),
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const ErpApp(),
     ),
   );
 }
@@ -55,22 +47,33 @@ class ErpApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final i18n = ref.watch(i18nControllerProvider);
     ref.watch(syncManagerProvider); // boot eagerly
+
     return ScreenUtilInit(
       designSize: const Size(1440, 900),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp.router(
-          title: 'ERP System',
+          title: 'Shamel ERP',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: ThemeMode.light,
           routerConfig: router,
-          localizationsDelegates: context.localizationDelegates,
-          supportedLocales: context.supportedLocales,
-          locale: context.locale,
+          locale: i18n.locale.locale,
+          supportedLocales: AppLocale.values.map((l) => l.locale),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          // Expose translations to the entire navigator subtree.
+          builder: (context, navigator) => TranslationsScope(
+            state: i18n,
+            child: navigator ?? const SizedBox.shrink(),
+          ),
         );
       },
     );
