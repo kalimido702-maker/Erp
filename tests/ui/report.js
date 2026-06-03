@@ -251,5 +251,3 @@ if (summaryFile) {
 fs.writeFileSync(HTML, html);
 log('🌐', `HTML report: ${HTML}`);
 log('📊', `${passed}/${total} passed (${Math.round((passed / total) * 100)}%)`);
-
-function log(emoji, msg) { console.log(`${emoji}  ${msg}`); }
